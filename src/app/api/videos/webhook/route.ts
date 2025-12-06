@@ -5,7 +5,8 @@ import {
   VideoAssetCreatedWebhookEvent,
   VideoAssetReadyWebhookEvent,
   VideoAssetErroredWebhookEvent,
-  VideoAssetTrackReadyWebhookEvent
+  VideoAssetTrackReadyWebhookEvent,
+  VideoAssetDeletedWebhookEvent,
 } from "@mux/mux-node/resources/webhooks"
 import { mux } from "@/lib/mux";
 import { db } from "@/db";
@@ -18,7 +19,8 @@ type webhookEvent =
 | VideoAssetCreatedWebhookEvent
 | VideoAssetReadyWebhookEvent
 | VideoAssetErroredWebhookEvent
-| VideoAssetTrackReadyWebhookEvent;
+| VideoAssetTrackReadyWebhookEvent
+| VideoAssetDeletedWebhookEvent;
 
 export const POST = async (request: Request) => {
   if(!SIGNING_SECRET) {
@@ -74,6 +76,11 @@ export const POST = async (request: Request) => {
 
       const thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
 
+      const previewUrl = `https://image.mux.com/${playbackId}/animated.gif`;
+
+      const duration = data.duration ? Math.round(data.duration + 1000) : 0;
+
+
       await db
       .update(videos)
       .set({
@@ -81,11 +88,39 @@ export const POST = async (request: Request) => {
         muxPlaybackId: playbackId,
         muxAssetId: data.id,
         thumbnailUrl,
+        previewUrl,
+        duration,
       })
       .where(eq(videos.muxUploadId, data.upload_id));
       break;
     }
-  
+
+    case "video.asset.errored":{
+      const data = payload.data as VideoAssetErroredWebhookEvent["data"];
+
+      if(!data.upload_id) {
+        return new Response("Missing upload ID", {status: 400});
+      }
+
+      await db
+      .update(videos)
+      .set({
+        muxStatus: data.status, 
+      })
+      .where(eq(videos.muxUploadId, data.upload_id));
+      break;
+    }
+
+    case "video.asset.deleted": {
+      const data = payload.data as VideoAssetDeletedWebhookEvent["data"];
+
+      if(!data.upload_id) {
+        return new Response("Missing upload ID", {status: 400});
+     }
+      await db
+          .delete(videos)
+          .where(eq(videos.muxUploadId, data.upload_id))
+      }
   
    return new Response("webhook received", {status: 200})
   } 
