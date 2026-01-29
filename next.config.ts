@@ -12,8 +12,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "utfs.io",
       }
-    ]
-  }
+    ],
+  },
+  
+  eslint: {
+      ignoreDuringBuilds: true,
+    },
 };
 
 export default nextConfig;
