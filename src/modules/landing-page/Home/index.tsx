@@ -62,7 +62,7 @@ export const HomePage = () => {
             Bridging the gap between potential and opportunity. Access premium educational resources designed to level the playing field for students everywhere..
           </p>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <Button size="lg" className="h-10 px-8 bg-blue-600 hover:bg-blue-700">
+            <Button size="lg" className="h-8 px-8 bg-blue-700 rounded-sm hover:bg-blue-700">
               Get Started
             </Button>
           </div>
