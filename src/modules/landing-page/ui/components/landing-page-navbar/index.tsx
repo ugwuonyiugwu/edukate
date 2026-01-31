@@ -41,7 +41,7 @@ export const LandingPageNavbar = () => {
 
       <div className="flex items-center gap-4">
         {/* Login Button (Visible on all screens, or hide on mobile if preferred) */}
-        <Button variant="login" size="sm">
+        <Button variant="login" size="sm" className="hidden md: visible lg:visible">
           login
         </Button>
 
