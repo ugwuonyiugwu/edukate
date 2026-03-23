@@ -40,9 +40,10 @@ export const documents = pgTable("documents", {
   name: text("name").notNull(),
   subject: text("subject").notNull(),
   description: text("description").notNull(),
+  videoUrl: text("video_url"),
   fileUrl: text("file_url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
-  downloads: integer("dowloads").notNull().default(0),
+  downloads: integer("downloads").notNull().default(0),
   likes: integer("likes").notNull().default(0),
   // LINK DOCUMENTS TO LIBRARY
   libraryId: integer("library_id").references(() => libraries.id, { onDelete: "cascade" }),

@@ -31,13 +31,23 @@ export const DocumentDetailView = ({ documentId, libraryId }: { documentId: numb
         <div className="lg:col-span-7 space-y-8">
           <div>
             <p className="text-xs font-black uppercase text-gray-400 mb-2">Title</p>
-            <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl font-bold">{doc.name}</div>
-          </div>
-          <div>
+            <div className="p-4 bg-gray-50 border border-gray-100 font-bold">{doc.name}</div>
+        </div>
+        <div>
             <p className="text-xs font-black uppercase text-gray-400 mb-2">Description</p>
-            <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl min-h-50 text-gray-600">{doc.description}</div>
-          </div>
-          <div>
+            <div className="w-full p-6 bg-gray-50/50 border border-gray-100 text-gray-600 min-h-62.5 leading-relaxed text-sm">
+                {doc.description ? (
+                    doc.description.split(/(?=\d\.)/).map((item, index) => (
+                    <div key={index} className="mb-2 last:mb-0">
+                        {item.trim()}
+                    </div>
+                    ))
+                ) : (
+                    "No description provided."
+                )}
+            </div>
+        </div>
+        <div>
             <p className="text-xs font-black uppercase text-gray-400 mb-2">Thumbnail</p>
             <div className="relative w-40 h-24 rounded-lg overflow-hidden border border-gray-100">
               <Image src={doc.thumbnailUrl || ""} alt="Thumb" fill className="object-cover" />
@@ -51,10 +61,25 @@ export const DocumentDetailView = ({ documentId, libraryId }: { documentId: numb
 
         {/* Right Side: Preview & Download */}
         <div className="lg:col-span-5 space-y-8">
-          <div className="relative aspect-video bg-slate-900 rounded-3xl overflow-hidden shadow-lg cursor-pointer">
+          {doc.videoUrl ? (
+            <Link 
+              href={`${doc.videoUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+                <div className="relative aspect-video bg-slate-900 rounded-3xl overflow-hidden shadow-lg cursor-pointer">
+                    <Image src={doc.thumbnailUrl || ""} alt="Preview" fill className="object-cover opacity-50" />
+                    <div className="absolute top-22 left-40 text-white font-black text-xl"> <PlayIcon size={40}/></div>
+                </div>
+            </Link>
+          ) : (
+            <div className="relative aspect-video bg-slate-900 rounded-3xl overflow-hidden shadow-lg cursor-pointer">
             <Image src={doc.thumbnailUrl || ""} alt="Preview" fill className="object-cover opacity-50" />
             <div className="absolute top-22 left-40 text-white font-black text-xl"> <PlayIcon size={40}/></div>
-          </div>
+            </div>
+          )}
+          
+         
 
           <div className="space-y-4 px-2 mt-8 font-bold text-sm uppercase">
             <div className="flex justify-between w-32"><span>like</span> <span>0</span></div>

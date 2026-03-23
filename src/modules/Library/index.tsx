@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { UploadButton } from "@/app/utils/uploadthing";
 
-// Updated to match your actual database schema
+// Updated Interface to include videoUrl
 export interface DocumentType {
   id: number;
   clerkId: string;
@@ -27,6 +27,7 @@ export interface DocumentType {
   subject: string;
   description: string;
   fileUrl: string;
+  videoUrl?: string | null; // Added this line
   thumbnailUrl: string | null;
   downloads: number; 
   likes: number;
@@ -149,7 +150,8 @@ export const LibraryPage = () => {
                   <ArrowLeft size={16} /> Back to Library
                 </button>
                 <DocumentMetadataForm 
-                  fileUrl={uploadedFileUrl || editingDoc?.fileUrl || ""} 
+                  fileUrl={uploadedFileUrl || editingDoc?.fileUrl || ""}
+                  videoUrl={editingDoc?.videoUrl ?? ""} // Ensure string fallback
                   initialData={editingDoc} 
                   onComplete={handleFinalSuccess} 
                 />
@@ -207,7 +209,7 @@ export const LibraryPage = () => {
                         {isDocsLoading ? (
                           <tr><td colSpan={4} className="p-20 text-center"><Loader2 className="animate-spin text-blue-600 mx-auto" /></td></tr>
                         ) : (
-                          realDocuments?.map((doc, index) => (
+                          realDocuments?.map((doc) => (
                             <tr key={doc.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0">
                               <td className="p-5 pl-8">
                                 <div className="flex items-center gap-4">
@@ -221,7 +223,7 @@ export const LibraryPage = () => {
                                     )}
                                   </div>
                                   <div className="flex flex-col min-w-0">
-                                    <span className="font-bold text-gray-900 truncate max-w-[200px] md:max-w-[300px]">{doc.name}</span>
+                                    <span className="font-bold text-gray-900 truncate max-w-50 md:max-w-75">{doc.name}</span>
                                     <span className="text-[10px] text-blue-600 uppercase font-black tracking-tighter mt-1">{doc.subject}</span>
                                   </div>
                                 </div>
@@ -246,6 +248,7 @@ export const LibraryPage = () => {
                                   <button 
                                     onClick={() => setEditingDoc({
                                       ...doc,
+                                      videoUrl: doc.videoUrl ?? null, // Added this line
                                       thumbnailUrl: doc.thumbnailUrl ?? null,
                                       createdAt: doc.createdAt ?? null,
                                     } as DocumentType)} 
@@ -289,7 +292,7 @@ export const LibraryPage = () => {
 
       {/* EDIT LIBRARY DIALOG */}
       <Dialog open={isEditLibOpen} onOpenChange={setIsEditLibOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-[40px] p-8 border-none shadow-2xl">
+        <DialogContent className="sm:max-w-106.25 rounded-[40px] p-8 border-none shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black tracking-tight">Library Settings</DialogTitle>
             <DialogDescription className="font-medium text-gray-500">Customize how your collection appears to others.</DialogDescription>

@@ -32,7 +32,7 @@ export const documentRouter = createTRPCRouter({
   incrementDownloads: baseProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const [updated] = await ctx.db // Changed 'db' to 'ctx.db'
+      const [updated] = await ctx.db
         .update(documents)
         .set({
           downloads: sql`${documents.downloads} + 1`,
@@ -41,9 +41,8 @@ export const documentRouter = createTRPCRouter({
         .returning();
         
       return updated;
-    }), // Fixed: removed the extra '});' that was here
+    }),
 
-  
   getLibraryById: baseProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
@@ -62,7 +61,7 @@ export const documentRouter = createTRPCRouter({
       };
     }),
 
-    getDocumentById: baseProcedure
+  getDocumentById: baseProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       const [doc] = await ctx.db
@@ -80,6 +79,7 @@ export const documentRouter = createTRPCRouter({
 
       return doc;
     }),
+
   getLibrary: protectedProcedure.query(async ({ ctx }) => {
     const lib = await ctx.db.query.libraries.findFirst({
       where: eq(libraries.clerkId, ctx.user.id),
@@ -178,6 +178,7 @@ export const documentRouter = createTRPCRouter({
       name: z.string().min(1),
       subject: z.string().min(1),
       description: z.string().min(1),
+      videoUrl: z.string().nullish(), // FIX: Changed from .min(1) to .nullish()
       fileUrl: z.string().url(),
       thumbnailUrl: z.string().url().optional().nullable(),
     }))
@@ -191,6 +192,7 @@ export const documentRouter = createTRPCRouter({
         name: input.name,
         subject: input.subject,
         description: input.description,
+        videoUrl: input.videoUrl ?? null, // Ensure fallback to null
         fileUrl: input.fileUrl,
         thumbnailUrl: input.thumbnailUrl ?? null,
         libraryId: lib?.id ?? null,
@@ -224,6 +226,7 @@ export const documentRouter = createTRPCRouter({
       name: z.string().min(1),
       subject: z.string().min(1),
       description: z.string().min(1),
+      videoUrl: z.string().nullish(), // FIX: Changed from .min(1) to .nullish()
       thumbnailUrl: z.string().url().nullish(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -233,6 +236,7 @@ export const documentRouter = createTRPCRouter({
           name: input.name,
           subject: input.subject,
           description: input.description,
+          videoUrl: input.videoUrl ?? null, // Ensure fallback to null
           thumbnailUrl: input.thumbnailUrl ?? null,
         })
         .where(and(eq(documents.id, input.id), eq(documents.clerkId, ctx.user.id)))

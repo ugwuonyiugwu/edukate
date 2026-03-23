@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { trpc } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, Trash2, Edit2, FileText } from "lucide-react";
+import { Loader2, Save, Trash2, Edit2, FileText, Video } from "lucide-react";
 import Image from "next/image";
 import { UploadButton } from "@/app/utils/uploadthing"; 
 import { ClientUploadedFileData } from "uploadthing/types";
@@ -14,6 +14,7 @@ interface DocumentType {
   subject: string;
   description: string;
   fileUrl: string;
+  videoUrl?: string | null; 
   thumbnailUrl: string | null;
   downloads: number;
   likes: number;
@@ -22,17 +23,22 @@ interface DocumentType {
 
 interface DocumentMetadataFormProps {
   fileUrl: string;
+  videoUrl?: string | null; 
   thumbnailUrl?: string | null;
   initialData?: DocumentType | null;
   onComplete: () => void;
 }
 
-export const DocumentMetadataForm = ({ fileUrl, thumbnailUrl, initialData, onComplete }: DocumentMetadataFormProps) => {
+export const DocumentMetadataForm = ({ fileUrl, videoUrl, thumbnailUrl, initialData, onComplete }: DocumentMetadataFormProps) => {
   const [name, setName] = useState(initialData?.name || "");
   const [subject, setSubject] = useState(initialData?.subject || "");
   const [description, setDescription] = useState(initialData?.description || "");
   
-  // Editable Thumbnail State
+  // FIX: Cast to string to satisfy TypeScript that the result of ?? will not be undefined
+  const [currentVideoUrl, setCurrentVideoUrl] = useState<string>(
+    (initialData?.videoUrl ?? videoUrl ?? "") as string
+  ); 
+  
   const [currentThumbnail, setCurrentThumbnail] = useState<string | null>(initialData?.thumbnailUrl || thumbnailUrl || null);
   const [showUploader, setShowUploader] = useState(false);
 
@@ -46,13 +52,18 @@ export const DocumentMetadataForm = ({ fileUrl, thumbnailUrl, initialData, onCom
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Convert empty string to null for clean database storage
+    const finalVideoUrl = currentVideoUrl.trim() === "" ? null : currentVideoUrl;
+
     if (initialData) {
       updateDocument.mutate({
         id: initialData.id,
         name,
         subject,
         description,
-        thumbnailUrl: currentThumbnail, // Now updates properly
+        videoUrl: finalVideoUrl, 
+        thumbnailUrl: currentThumbnail,
       });
     } else {
       createDocument.mutate({
@@ -60,6 +71,7 @@ export const DocumentMetadataForm = ({ fileUrl, thumbnailUrl, initialData, onCom
         subject,
         description,
         fileUrl,
+        videoUrl: finalVideoUrl ?? undefined,
         thumbnailUrl: currentThumbnail || undefined,
       });
     }
@@ -74,12 +86,10 @@ export const DocumentMetadataForm = ({ fileUrl, thumbnailUrl, initialData, onCom
       </h2>
       
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* EDITABLE THUMBNAIL SECTION */}
+        {/* THUMBNAIL SECTION */}
         <div className="border border-gray-100 bg-gray-50/50 p-5 rounded-2xl">
           <label className="block text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">Document Thumbnail</label>
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            
-            {/* Thumbnail Preview */}
             <div className="shrink-0">
               {currentThumbnail ? (
                 <div className="relative w-28 h-36 rounded-xl overflow-hidden border-4 border-white shadow-xl bg-gray-100">
@@ -93,26 +103,13 @@ export const DocumentMetadataForm = ({ fileUrl, thumbnailUrl, initialData, onCom
               )}
             </div>
 
-            {/* Actions Section */}
             <div className="flex-1 space-y-3 w-full sm:w-auto">
               {currentThumbnail && !showUploader && (
                 <div className="flex items-center gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowUploader(true)} 
-                    className="gap-2 text-xs font-bold rounded-lg border-gray-200"
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowUploader(true)} className="gap-2 text-xs font-bold rounded-lg border-gray-200">
                     <Edit2 size={14} /> Change
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setCurrentThumbnail(null)} 
-                    className="gap-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                  >
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setCurrentThumbnail(null)} className="gap-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
                     <Trash2 size={14} /> Remove
                   </Button>
                 </div>
@@ -124,7 +121,7 @@ export const DocumentMetadataForm = ({ fileUrl, thumbnailUrl, initialData, onCom
                   <UploadButton
                     endpoint="thumbnailUploader"
                     onClientUploadComplete={(res: ClientUploadedFileData<unknown>[]) => {
-                     const url = res?.[0]?.ufsUrl || res?.[0]?.url; 
+                      const url = res?.[0]?.ufsUrl || res?.[0]?.url; 
                       if (url) {
                         setCurrentThumbnail(url);
                         setShowUploader(false);
@@ -161,6 +158,20 @@ export const DocumentMetadataForm = ({ fileUrl, thumbnailUrl, initialData, onCom
               onChange={(e) => setName(e.target.value)}
               className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium transition-all"
               placeholder="Document title..."
+            />
+          </div>
+
+          {/* VIDEO URL INPUT */}
+          <div>
+            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest  items-center gap-2">
+              <Video size={12} className="text-blue-500" /> YouTube / Video Link (Optional)
+            </label>
+            <input
+              type="url"
+              value={currentVideoUrl}
+              onChange={(e) => setCurrentVideoUrl(e.target.value)}
+              className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium transition-all"
+              placeholder="https://youtube.com/watch?v=..."
             />
           </div>
 
