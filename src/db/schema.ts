@@ -61,3 +61,16 @@ export const documentRelations = relations(documents, ({ one }) => ({
     references: [libraries.id],
   }),
 }));
+
+export const quizzes = pgTable("quizzes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clerkId: text("clerk_id").notNull(),
+  title: text("title").notNull(),
+  category: text("category").notNull(),
+  description: text("description"),
+  date: text("date").notNull(), 
+  time: text("time").notNull(),
+  points: integer("points").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
