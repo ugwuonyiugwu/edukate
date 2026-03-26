@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface RecentQuizCardProps {
+serverOffset: number;
   category: string;
   title: string;
   points: number;

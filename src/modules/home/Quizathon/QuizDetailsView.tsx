@@ -219,7 +219,7 @@ export const QuizDetailsView = ({ quizId }: { quizId: string }) => {
 
         {/* Right Column: Attendees */}
         <div className="lg:col-span-4 space-y-6">
-          <Card className="p-5 md:p-6 rounded-sm border-blue-500 shadow-sm bg-white h-full lg:min-h-[450px]">
+          <Card className="p-5 md:p-6 rounded-sm border-blue-500 shadow-sm bg-white h-full lg:min-h-112.25">
             <div className="flex items-center justify-between mb-6 md:mb-8">
               <h2 className="text-sm font-black uppercase tracking-tighter flex items-center gap-2 text-slate-800">
                 <Users size={18} className="text-indigo-600" /> Attendees
@@ -229,7 +229,7 @@ export const QuizDetailsView = ({ quizId }: { quizId: string }) => {
               </div>
             </div>
 
-            <div className="space-y-4 max-h-[350px] lg:max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-4 max-h-87.5 lg:max-h-100 overflow-y-auto pr-2 custom-scrollbar">
               {quiz.participants.map((p) => (
                 <div key={p.id} className="flex items-center justify-between group">
                   <div className="flex items-center gap-3">
@@ -237,7 +237,7 @@ export const QuizDetailsView = ({ quizId }: { quizId: string }) => {
                       {p.user?.firstName?.[0] || 'U'}
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-black text-slate-700 truncate max-w-[120px] sm:max-w-none">
+                      <span className="text-xs font-black text-slate-700 truncate max-w-30 sm:max-w-none">
                         {p.user?.firstName} {p.user?.lastName} {p.clerkId === quiz.creatorId && "(Host)"}
                       </span>
                       <span className="text-[9px] font-bold text-green-500 uppercase flex items-center gap-1 italic">
@@ -265,7 +265,7 @@ export const QuizDetailsView = ({ quizId }: { quizId: string }) => {
   );
 };
 
-function ActionStage({ active, icon, label, desc, status, onClick, isLoading, isDone }: ActionStageProps) {
+function ActionStage({ active, icon, label, desc, onClick, isLoading, isDone }: ActionStageProps) {
   return (
     <button
       disabled={!active || isLoading}

@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 interface PublicQuizCardProps {
   id: string;
+  serverOffset: number;
   category: string;
   title: string;
   points: number;
@@ -13,7 +14,7 @@ interface PublicQuizCardProps {
   time: string;
 }
 
-export const PublicQuizCard = ({ category, title, points, date, time, id }: PublicQuizCardProps) => {
+export const PublicQuizCard = ({ category, title, points, date, time, id, }: PublicQuizCardProps) => {
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
       {/* Top Section: Category and Icon */}

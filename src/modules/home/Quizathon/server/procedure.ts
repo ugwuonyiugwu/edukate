@@ -90,6 +90,11 @@ export const quizRouter = createTRPCRouter({
       return result;
     }),
 
+    getServerTime: protectedProcedure
+  .query(() => {
+    return { serverTime: Date.now() };
+  }),
+
   getAllQuizzes: protectedProcedure.query(async () => {
     return await db
       .select()

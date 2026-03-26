@@ -5,4 +5,5 @@ export interface QuizData {
   date: string;
   time: string;
   points: number;
+  serverOffset: number;
 }
