@@ -19,15 +19,15 @@ export const users = pgTable("users", {
   courseProgress: integer("course_progress").default(0).notNull(),
   currentStreak: integer("current_streak").default(0).notNull(),
   longestStreak: integer("longest_streak").default(0).notNull(),
-  points: integer("points").default(0).notNull(),
+  points: integer("points").default(200).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => [uniqueIndex("clerk_id_idx").on(t.clerkId)]);
 
-// --- NEW TABLE: LIBRARIES ---
+// --- LIBRARIES & DOCUMENTS ---
 export const libraries = pgTable("libraries", {
   id: serial("id").primaryKey(),
-  clerkId: text("clerk_id").notNull().unique(), // One library per user
+  clerkId: text("clerk_id").notNull().unique(),
   name: text("name").notNull(),
   thumbnailUrl: text("thumbnail_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -45,12 +45,37 @@ export const documents = pgTable("documents", {
   thumbnailUrl: text("thumbnail_url"),
   downloads: integer("downloads").notNull().default(0),
   likes: integer("likes").notNull().default(0),
-  // LINK DOCUMENTS TO LIBRARY
   libraryId: integer("library_id").references(() => libraries.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// --- RELATIONSHIPS (For easy counting/fetching) ---
+// --- QUIZZES ---
+export const quizzes = pgTable("quizzes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clerkId: text("clerk_id").notNull(),
+  title: text("title").notNull(),
+  category: text("category").notNull(),
+  date: text("date").notNull(), 
+  time: text("time").notNull(),
+  points: integer("points").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// --- NEW TABLE: PARTICIPANTS (The Join Table) ---
+export const participants = pgTable("participants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  quizId: uuid("quiz_id").references(() => quizzes.id, { onDelete: "cascade" }).notNull(),
+  clerkId: text("clerk_id").notNull(), // We use clerkId to match your user identification style
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+});
+
+// --- UPDATED RELATIONSHIPS ---
+
+export const userRelations = relations(users, ({ many }) => ({
+  registrations: many(participants),
+}));
+
 export const libraryRelations = relations(libraries, ({ many }) => ({
   documents: many(documents),
 }));
@@ -62,15 +87,17 @@ export const documentRelations = relations(documents, ({ one }) => ({
   }),
 }));
 
-export const quizzes = pgTable("quizzes", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  clerkId: text("clerk_id").notNull(),
-  title: text("title").notNull(),
-  category: text("category").notNull(),
-  description: text("description"),
-  date: text("date").notNull(), 
-  time: text("time").notNull(),
-  points: integer("points").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const quizRelations = relations(quizzes, ({ many }) => ({
+  participants: many(participants),
+}));
+
+export const participantRelations = relations(participants, ({ one }) => ({
+  quiz: one(quizzes, {
+    fields: [participants.quizId],
+    references: [quizzes.id],
+  }),
+  user: one(users, {
+    fields: [participants.clerkId],
+    references: [users.clerkId],
+  }),
+}));

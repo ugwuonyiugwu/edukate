@@ -7,7 +7,7 @@ interface UserQuizCardProps extends QuizData {
   onDelete: (id: string) => void;
 }
 
-export function UserQuizCard({ id, title, description, category, date, time, points, onDelete }: UserQuizCardProps) {
+export function UserQuizCard({ id, title, category, date, time, points, onDelete }: UserQuizCardProps) {
   return (
     <Card className="overflow-hidden border-slate-200 shadow-sm bg-white group hover:border-blue-400 transition-all duration-300 flex flex-col h-full hover:shadow-xl relative">
       <div className="h-36 bg-slate-50 border-b border-slate-100 relative p-6 flex flex-col justify-center overflow-hidden">
@@ -20,7 +20,7 @@ export function UserQuizCard({ id, title, description, category, date, time, poi
 
       <div className="p-5 flex flex-col flex-1 space-y-5">
         <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed flex-1 font-medium italic">
-          {description}
+          
         </p>
 
         <div className="grid grid-cols-2 gap-3 border-t border-slate-50 pt-4">
