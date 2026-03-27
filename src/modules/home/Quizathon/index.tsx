@@ -1,4 +1,3 @@
-// @/modules/home/Quizzes/views/QuizDashboardView.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -7,7 +6,7 @@ import { UserQuizCard } from './components/UserQuizCard';
 import { CreateQuizDialog } from './components/CreateQuizDialog';
 import { RecentQuizCard } from './components/RecentQuizCard';
 import { PublicQuizCard } from './components/PublicQuizCard'; 
-import { BookOpen, Loader2, History, Globe2 } from 'lucide-react';
+import { BookOpen, Loader2, History } from 'lucide-react';
 import { toast } from "sonner";
 import { Card } from '@/components/ui/card';
 
@@ -26,9 +25,6 @@ export const QuizDashboardView = () => {
   const { data: quizzes, isLoading: isQuizzesLoading } = trpc.quiz.getMyQuizzes.useQuery();
   const { data: allQuizzes, isLoading: isAllQuizzesLoading } = trpc.quiz.getAllQuizzes.useQuery();
   
-  // 2. The Optimized Time Sync
-  // We use the 'select' option to transform the data immediately upon arrival.
-  // This is pure, efficient, and avoids all "cascading render" or "ref" errors.
   const { data: serverOffset = 0 } = trpc.quiz.getServerTime.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
@@ -74,7 +70,8 @@ export const QuizDashboardView = () => {
               setIsOpen={setIsDialogOpen} 
               onSubmit={(data) => createMutation.mutate(data)}
               isPending={createMutation.isPending}
-              userPoints={user?.points ?? 0} 
+              userPoints={user?.points ?? 0}
+              serverOffset={serverOffset} 
             />
           </div>
         </div>

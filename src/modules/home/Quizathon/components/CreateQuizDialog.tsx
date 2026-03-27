@@ -1,6 +1,6 @@
 // @/modules/home/Quizzes/components/CreateQuizDialog.tsx
 import React from 'react';
-import { Plus, Coins, Loader2, AlignLeft } from 'lucide-react';
+import { Plus, Coins, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { QuizData } from './types';
@@ -9,12 +9,21 @@ import { toast } from "sonner";
 interface CreateQuizDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  // This now expects the full Omit type including serverOffset
   onSubmit: (data: Omit<QuizData, "id" | "createdAt" | "updatedAt" | "clerkId">) => void;
   isPending: boolean;
   userPoints: number;
+  serverOffset: number;
 }
 
-export function CreateQuizDialog({ isOpen, setIsOpen, onSubmit, isPending, userPoints }: CreateQuizDialogProps) {
+export function CreateQuizDialog({ 
+  isOpen, 
+  setIsOpen, 
+  onSubmit, 
+  isPending, 
+  userPoints, 
+  serverOffset 
+}: CreateQuizDialogProps) {
   
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,6 +44,7 @@ export function CreateQuizDialog({ isOpen, setIsOpen, onSubmit, isPending, userP
     const description = (formData.get('description') as string) || `Join this ${subject} session on ${topic}.`;
 
     // 2. Prepare data for tRPC
+    // Added 'serverOffset' here to match the required Type
     const data = {
       title: topic,
       category: subject,
@@ -45,7 +55,8 @@ export function CreateQuizDialog({ isOpen, setIsOpen, onSubmit, isPending, userP
       questions: 0,
       label: topic,
       value: 0,
-      color: "text-blue-600"
+      color: "text-blue-600",
+      serverOffset: serverOffset // <--- Fix: Added the missing property
     };
 
     onSubmit(data);
@@ -59,7 +70,7 @@ export function CreateQuizDialog({ isOpen, setIsOpen, onSubmit, isPending, userP
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-112.5 bg-white rounded-xl border-none p-0 overflow-hidden shadow-2xl">
+      <DialogContent className="sm:max-w-[450px] bg-white rounded-xl border-none p-0 overflow-hidden shadow-2xl">
         {/* Header Section */}
         <div className="bg-[#0B1221] p-6 text-white border-b border-white/10">
           <DialogHeader>
