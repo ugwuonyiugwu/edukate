@@ -2,42 +2,59 @@
 import { db } from "@/db";
 import { quizzes, users, participants } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 export const quizRouter = createTRPCRouter({
-  removeParticipant: protectedProcedure
-    .input(z.object({ 
-      quizId: z.string(), 
-      participantClerkId: z.string() 
-    }))
-    .mutation(async ({ ctx, input }) => {
-      // 1. Check if the current user is the owner of the quiz
-      const quiz = await ctx.db.query.quizzes.findFirst({
-        where: (quizzes, { eq, and }) => and(
-          eq(quizzes.id, input.quizId),
-          eq(quizzes.clerkId, ctx.clerkUserId!) 
-        ),
+ removeParticipant: protectedProcedure
+  .input(z.object({ 
+    quizId: z.string(), 
+    participantClerkId: z.string() 
+  }))
+  .mutation(async ({ ctx, input }) => {
+    // 1. Check if the current user is the owner of the quiz
+    const quiz = await ctx.db.query.quizzes.findFirst({
+      where: (quizzes, { eq, and }) => and(
+        eq(quizzes.id, input.quizId),
+        eq(quizzes.clerkId, ctx.clerkUserId!) 
+      ),
+    });
+
+    if (!quiz) {
+      throw new TRPCError({ 
+        code: "UNAUTHORIZED", 
+        message: "You are not the host of this mission." 
       });
+    }
 
-      if (!quiz) {
-        throw new TRPCError({ 
-          code: "UNAUTHORIZED", 
-          message: "You are not the host of this mission." 
-        });
-      }
+    // 2. Perform the removal and refund in a transaction
+    return await ctx.db.transaction(async (tx) => {
+      // Find the participant to verify they exist and get the quiz points
+      // We use the quiz.points from the quiz we fetched in step 1
+      const pointsToRefund = quiz.points;
 
-      // 2. Remove the participant
-      return await ctx.db
-        .delete(participants)
-        .where(
-          and(
-            eq(participants.quizId, input.quizId),
-            eq(participants.clerkId, input.participantClerkId)
-          )
-        );
-    }),
+      // Update the participant's points (Refund)
+      await tx
+        .update(users)
+        .set({
+          points: sql`${users.points} + ${pointsToRefund}`,
+        })
+        .where(eq(users.clerkId, input.participantClerkId));
+
+      // // Delete the participation record
+      // const result = await tx
+      //   .delete(participants)
+      //   .where(
+      //     and(
+      //       eq(participants.quizId, input.quizId),
+      //       eq(participants.clerkId, input.participantClerkId)
+      //     )
+      //   );
+
+      return { success: true, refunded: pointsToRefund };
+    });
+  }),
 
   join: protectedProcedure
     .input(z.object({ quizId: z.string() }))
@@ -65,6 +82,22 @@ export const quizRouter = createTRPCRouter({
 
       return { success: true };
     }),
+getParticipants: protectedProcedure
+  .input(z.object({ quizId: z.string() }))
+  .query(async ({ ctx, input }) => {
+    const data = await ctx.db.query.participants.findMany({
+      where: (participants, { eq }) => eq(participants.quizId, input.quizId),
+      with: {
+        user: true, 
+      },
+    });
+
+    return data.map((p) => ({
+      clerkId: p.clerkId,
+      name: p.user?.username ?? p.user?.firstName ?? "Anonymous User",
+      joinedAt: p.joinedAt,
+    }));
+  }),
 
   getOne: protectedProcedure
     .input(z.object({ id: z.string() }))
