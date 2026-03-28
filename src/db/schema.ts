@@ -62,18 +62,37 @@ export const quizzes = pgTable("quizzes", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// --- NEW TABLE: PARTICIPANTS (The Join Table) ---
+// --- PARTICIPANTS ---
 export const participants = pgTable("participants", {
   id: uuid("id").primaryKey().defaultRandom(),
   quizId: uuid("quiz_id").references(() => quizzes.id, { onDelete: "cascade" }).notNull(),
-  clerkId: text("clerk_id").notNull(), // We use clerkId to match your user identification style
+  clerkId: text("clerk_id").notNull(), 
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
 
-// --- UPDATED RELATIONSHIPS ---
+// --- SUBMISSIONS (Updated for 20 questions & Type Safety) ---
+export const submissions = pgTable("submissions", {
+  id: uuid("id").primaryKey().defaultRandom(), // Updated to uuid
+  quizId: uuid("quiz_id") // Changed to uuid to match quizzes.id
+    .notNull()
+    .references(() => quizzes.id, { onDelete: 'cascade' }),
+  clerkId: text("clerk_id") // Changed to snake_case for consistency
+    .notNull()
+    .references(() => users.clerkId),
+  questionText: text("question_text").notNull(),
+  imageUrl: text("image_url"),
+  correctAnswer: text("correct_answer").notNull(),
+  wrongAnswer1: text("wrong_answer_1").notNull(),
+  wrongAnswer2: text("wrong_answer_2").notNull(),
+  wrongAnswer3: text("wrong_answer_3").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// --- RELATIONSHIPS ---
 
 export const userRelations = relations(users, ({ many }) => ({
   registrations: many(participants),
+  submissions: many(submissions), // Added relationship
 }));
 
 export const libraryRelations = relations(libraries, ({ many }) => ({
@@ -89,6 +108,7 @@ export const documentRelations = relations(documents, ({ one }) => ({
 
 export const quizRelations = relations(quizzes, ({ many }) => ({
   participants: many(participants),
+  submissions: many(submissions), // Added relationship
 }));
 
 export const participantRelations = relations(participants, ({ one }) => ({
@@ -98,6 +118,17 @@ export const participantRelations = relations(participants, ({ one }) => ({
   }),
   user: one(users, {
     fields: [participants.clerkId],
+    references: [users.clerkId],
+  }),
+}));
+
+export const submissionRelations = relations(submissions, ({ one }) => ({
+  quiz: one(quizzes, {
+    fields: [submissions.quizId],
+    references: [quizzes.id],
+  }),
+  user: one(users, {
+    fields: [submissions.clerkId],
     references: [users.clerkId],
   }),
 }));

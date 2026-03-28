@@ -2,7 +2,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { trpc } from "@/trpc/server";
 import { HydrateClient } from "@/trpc/server";
-import { QuizDetailsView } from "@/modules/home/Quizathon/QuizDetailsView";
+import { QuizDetailsView } from "@/modules/home/Quizathon/Quizviews/QuizDetailsView";
 import { redirect } from "next/navigation";
 
 export default async function QuizDetailsPage({
