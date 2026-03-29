@@ -179,7 +179,7 @@ const router = useRouter(); // Add this line
               label="Start Quiz"
               desc="Begin competition"
               status={isTakeQuizActive ? "Live" : "Standby"}
-              onClick={() => toast.success("Redirecting...")}
+              onClick={() => router.push(`/quizathon/${quizId}/questions`)}
             />
           </div>
         </div>

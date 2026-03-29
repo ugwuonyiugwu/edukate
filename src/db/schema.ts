@@ -1,5 +1,5 @@
 // @/db/schema.ts
-import { pgTable, text, timestamp, uuid, integer, uniqueIndex, date, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, uniqueIndex, date, serial, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -63,10 +63,13 @@ export const quizzes = pgTable("quizzes", {
 });
 
 // --- PARTICIPANTS ---
+
 export const participants = pgTable("participants", {
   id: uuid("id").primaryKey().defaultRandom(),
   quizId: uuid("quiz_id").references(() => quizzes.id, { onDelete: "cascade" }).notNull(),
   clerkId: text("clerk_id").notNull(), 
+  score: integer("score").default(0).notNull(), // ADDED
+  isEliminated: boolean("is_eliminated").default(false).notNull(), // ADDED
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
 

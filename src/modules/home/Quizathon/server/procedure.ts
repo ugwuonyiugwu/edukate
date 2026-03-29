@@ -2,7 +2,7 @@
 import { db } from "@/db";
 import { quizzes, users, participants, submissions } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count, asc } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
@@ -224,5 +224,57 @@ export const quizRouter = createTRPCRouter({
         wrongAnswer2: input.wrongAnswer2,
         wrongAnswer3: input.wrongAnswer3,
       });
+    }),
+
+    getQuizQuestions: protectedProcedure
+    .input(z.object({ quizId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const questions = await ctx.db.query.submissions.findMany({
+        where: eq(submissions.quizId, input.quizId),
+      });
+      return questions.sort(() => Math.random() - 0.5);
+    }),
+
+  // 2. Submit the user's final score
+  submitFinalScore: protectedProcedure
+    .input(z.object({ quizId: z.string(), score: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.update(participants)
+        .set({ score: input.score })
+        .where(and(
+          eq(participants.quizId, input.quizId), 
+          eq(participants.clerkId, ctx.clerkUserId!)
+        ));
+    }),
+
+  // 3. Get all active participants (for the elimination arena)
+  getLiveParticipants: protectedProcedure
+    .input(z.object({ quizId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.query.participants.findMany({
+        where: and(
+          eq(participants.quizId, input.quizId),
+          eq(participants.isEliminated, false)
+        ),
+        orderBy: [desc(participants.score)],
+      });
+    }),
+
+  // 4. The "Executioner" - Eliminates the lowest scorer
+  eliminateLowest: protectedProcedure
+    .input(z.object({ quizId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const active = await ctx.db.query.participants.findMany({
+        where: and(eq(participants.quizId, input.quizId), eq(participants.isEliminated, false)),
+        orderBy: [asc(participants.score)] // Smallest score first
+      });
+
+      if (active.length <= 1) return { winner: active[0] };
+
+      await ctx.db.update(participants)
+        .set({ isEliminated: true })
+        .where(eq(participants.id, active[0].id));
+        
+      return { eliminated: active[0] };
     }),
 });
