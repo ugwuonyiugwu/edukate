@@ -57,6 +57,8 @@ export const quizzes = pgTable("quizzes", {
   category: text("category").notNull(),
   date: text("date").notNull(), 
   time: text("time").notNull(),
+  startTime: timestamp("start_time"), 
+  status: text("status").default("waiting").notNull(), 
   points: integer("points").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

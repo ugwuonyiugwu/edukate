@@ -7,7 +7,7 @@ import {
   Loader2, Users, Trophy,
   CheckCircle2, UploadCloud, PlayCircle,
   UserPlus, ChevronLeft, CalendarDays,
-  ArrowRight,  XCircle, LucideIcon
+  ArrowRight, XCircle, LucideIcon, Rocket
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
@@ -40,18 +40,18 @@ interface QuizData {
 
 interface ActionStageProps {
   active: boolean;
-  icon: LucideIcon; // Changed to LucideIcon type
+  icon: LucideIcon;
   label: string;
   desc: string;
   status: string;
   onClick?: () => void;
   isLoading?: boolean;
   isDone?: boolean;
+  isLive?: boolean; // New prop for visual emphasis
 }
 
 export const QuizDetailsView = ({ quizId }: { quizId: string }) => {
-
-const router = useRouter(); // Add this line
+  const router = useRouter();
   const [msLeft, setMsLeft] = useState<number | null>(null);
   const utils = trpc.useUtils();
 
@@ -93,18 +93,25 @@ const router = useRouter(); // Add this line
   if (isLoading) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FDFDFD] p-4 text-center">
       <Loader2 className="animate-spin text-indigo-600 mb-4" size={48} />
-      <span className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Synchronizing...</span>
+      <span className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Synchronizing System...</span>
     </div>
   );
 
   if (!quiz) return <div className="p-10 md:p-20 text-center font-bold text-slate-500">Quiz not found.</div>;
 
   const hourInMs = 60 * 60 * 1000;
-  const twoMinsInMs = 2 * 60 * 1000;
   const currentMs = msLeft ?? 0;
+
+  // --- AUTOMATIC STAGE LOGIC ---
+  // 1. Joining is only allowed until 1 hour before start
   const isJoinActive = currentMs > hourInMs;
-  const isUploadActive = hasJoined && currentMs <= hourInMs && currentMs > twoMinsInMs;
-  const isTakeQuizActive = hasJoined && currentMs === 0;
+  
+  // 2. Uploading is allowed between 1 hour and 0 seconds left
+  const isUploadActive = hasJoined && currentMs <= hourInMs && currentMs > 0;
+  
+  // 3. Quiz activates automatically for everyone at 00:00:00
+  const isTimeReady = currentMs === 0;
+  const canEnterQuiz = hasJoined && isTimeReady;
 
   const formatCountdown = (ms: number) => {
     const h = Math.floor(ms / 3600000).toString().padStart(2, '0');
@@ -116,7 +123,7 @@ const router = useRouter(); // Add this line
   const time = formatCountdown(currentMs);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-10 md:pb-20">
+    <div className="min-h-screen bg-[#F8FAFC] pb-10 md:pb-20 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 md:pt-8 flex items-center justify-between">
         <Link href="/quizathon" className="group flex items-center gap-2 text-slate-500 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all hover:text-indigo-600">
           <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
@@ -128,37 +135,50 @@ const router = useRouter(); // Add this line
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 mt-6 md:mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-8">
-          <div className="relative overflow-hidden bg-[#0F172A] p-6 md:p-10 text-white shadow-2xl rounded-sm">
-            <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-none mb-6">
+          <div className="relative overflow-hidden bg-[#0F172A] p-6 md:p-10 text-white shadow-2xl rounded-sm border-l-4 border-indigo-500">
+            <div className="absolute top-4 right-4 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
+               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${isTimeReady ? 'bg-green-500 animate-ping' : 'bg-slate-500'}`} />
+                {isTimeReady ? "Live Session" : "Scheduled"}
+               </span>
+            </div>
+            
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tighter leading-none mb-6 italic uppercase">
               {quiz.title}
             </h1>
+
             <div className="flex flex-wrap gap-8">
               <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Schedule</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Launch Date</span>
                 <div className="flex items-center gap-2 text-sm font-bold">
-                  <CalendarDays size={16} className="text-indigo-400" /> {quiz.date} — {quiz.time}
+                  <CalendarDays size={16} className="text-indigo-400" /> {quiz.date} at {quiz.time}
                 </div>
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Prize Pool</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Prize Bounty</span>
                 <div className="flex items-center gap-2 text-sm font-bold">
                   <Trophy size={16} className="text-amber-400" /> {quiz.points.toLocaleString()} Points
                 </div>
               </div>
             </div>
-            {/* Countdown Display */}
-            <div className="mt-10 pt-6 border-t border-white/5 flex items-center gap-4">
-              <span className="text-4xl font-black tabular-nums">{time.h}:{time.m}:{time.s}</span>
-              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Until Launch</span>
+
+            {/* Global Countdown */}
+            <div className="mt-10 pt-6 border-t border-white/5 flex items-end gap-3">
+              <span className={`text-5xl font-black tabular-nums tracking-tighter ${isTimeReady ? 'text-green-500' : 'text-white'}`}>
+                {isTimeReady ? "00:00:00" : `${time.h}:${time.m}:${time.s}`}
+              </span>
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">
+                {isTimeReady ? "Battle Active" : "T-Minus to Ignition"}
+              </span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <ActionStage
               active={isJoinActive && !hasJoined}
-              icon={UserPlus} // Passed as component
-              label={hasJoined ? "Registered" : "Join"}
-              desc={hasJoined ? "Entry secured" : "Reserve spot"}
+              icon={UserPlus}
+              label={hasJoined ? "Registered" : "Join Mission"}
+              desc={hasJoined ? "Access granted" : "Deduct points to enter"}
               status={isJoinActive ? "Open" : "Closed"}
               onClick={() => joinMutation.mutate({ quizId })}
               isLoading={joinMutation.isPending}
@@ -170,15 +190,15 @@ const router = useRouter(); // Add this line
               label="Submit Work"
               desc="Verify research"
               status={isUploadActive ? "Active" : "Locked"}
-              // UPDATE THIS LINE BELOW
               onClick={() => router.push(`/quizathon/${quizId}/submit`)}
             />
             <ActionStage
-              active={isTakeQuizActive}
-              icon={PlayCircle}
-              label="Start Quiz"
-              desc="Begin competition"
-              status={isTakeQuizActive ? "Live" : "Standby"}
+              active={canEnterQuiz}
+              isLive={isTimeReady}
+              icon={isTimeReady ? Rocket : PlayCircle}
+              label={isTimeReady ? "Enter Mission" : "Quiz Locked"}
+              desc={isTimeReady ? "Begin competition now!" : "Waiting for clock..."}
+              status={isTimeReady ? "Live" : "Standby"}
               onClick={() => router.push(`/quizathon/${quizId}/questions`)}
             />
           </div>
@@ -186,19 +206,19 @@ const router = useRouter(); // Add this line
 
         {/* ATTENDEES COLUMN */}
         <div className="lg:col-span-4">
-          <Card className="p-6 rounded-sm border-blue-500 bg-white h-full flex flex-col">
+          <Card className="p-6 rounded-sm border-t-2 border-indigo-500 bg-white h-full flex flex-col shadow-sm">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-sm font-black uppercase tracking-tighter flex items-center gap-2">
-                <Users size={18} className="text-indigo-600" /> Attendees
+                <Users size={18} className="text-indigo-600" /> Final Roster
               </h2>
-              <span className="text-[10px] font-black text-slate-400">{quiz.participants.length}/50</span>
+              <span className="text-[10px] font-black text-slate-400">{quiz.participants.length} / 50</span>
             </div>
 
             <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
               {quiz.participants.map((p) => (
-                <div key={p.clerkId} className="flex items-center justify-between group p-2 bg-slate-50/50 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100">
+                <div key={p.clerkId} className="flex items-center justify-between group p-2 bg-slate-50/50 rounded-lg border border-transparent hover:border-slate-100 transition-all">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xs">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xs">
                       {p.user?.firstName?.[0] || 'U'}
                     </div>
                     <div className="flex flex-col">
@@ -206,7 +226,7 @@ const router = useRouter(); // Add this line
                         {p.user?.firstName} {p.user?.lastName}
                       </span>
                       {p.clerkId === quiz.clerkId ? (
-                        <span className="text-[8px] font-black text-indigo-600 uppercase">Host</span>
+                        <span className="text-[8px] font-black text-indigo-600 uppercase tracking-widest">Mission Host</span>
                       ) : (
                         <span className="text-[9px] font-bold text-green-500 uppercase flex items-center gap-1 italic">
                           <CheckCircle2 size={10} /> Verified
@@ -222,7 +242,7 @@ const router = useRouter(); // Add this line
                           removeMutation.mutate({ quizId: quiz.id, participantClerkId: p.clerkId });
                         }
                       }}
-                      className="p-2 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-all"
+                      className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-all"
                       disabled={removeMutation.isPending}
                     >
                       {removeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={16} />}
@@ -238,25 +258,35 @@ const router = useRouter(); // Add this line
   );
 };
 
-function ActionStage({ active, icon: Icon, label, desc, onClick, isLoading, isDone }: ActionStageProps) {
+function ActionStage({ active, icon: Icon, label, desc, onClick, isLoading, isDone, isLive }: ActionStageProps) {
   return (
     <button
       disabled={!active || isLoading}
       onClick={onClick}
-      className={`group relative flex items-center gap-4 p-4 w-full rounded-sm transition-all border text-left ${
-        isDone ? 'bg-indigo-50 border-indigo-200' : active ? 'bg-white border-blue-700 shadow-lg' : 'bg-slate-50 opacity-60'
+      className={`group relative flex items-center gap-4 p-5 w-full rounded-sm transition-all border-2 text-left ${
+        isLive 
+          ? 'bg-indigo-600 border-indigo-400 shadow-xl shadow-indigo-200' 
+          : isDone 
+            ? 'bg-indigo-50 border-indigo-200' 
+            : active 
+              ? 'bg-white border-slate-900 hover:scale-[1.02]' 
+              : 'bg-slate-50 opacity-40 grayscale cursor-not-allowed'
       }`}
     >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all shrink-0 ${
-        active || isDone ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400'
+      <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all shrink-0 ${
+        isLive ? 'bg-white text-indigo-600' : (active || isDone ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400')
       }`}>
-        {isLoading ? <Loader2 size={18} className="animate-spin" /> : isDone ? <CheckCircle2 size={18} /> : <Icon size={18} />}
+        {isLoading ? <Loader2 size={20} className="animate-spin" /> : isDone ? <CheckCircle2 size={20} /> : <Icon size={20} />}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className={`text-[11px] font-black uppercase tracking-tight ${active || isDone ? 'text-slate-800' : 'text-slate-400'}`}>{label}</h3>
-        <p className="text-[10px] font-bold text-slate-400 truncate">{desc}</p>
+        <h3 className={`text-xs font-black uppercase tracking-tight ${isLive ? 'text-white' : (active || isDone ? 'text-slate-800' : 'text-slate-400')}`}>
+          {label}
+        </h3>
+        <p className={`text-[10px] font-bold truncate ${isLive ? 'text-indigo-100' : 'text-slate-400'}`}>
+          {desc}
+        </p>
       </div>
-      {active && !isDone && <ArrowRight size={14} className="text-indigo-600 shrink-0" />}
+      {active && !isDone && <ArrowRight size={16} className={isLive ? "text-white animate-pulse" : "text-indigo-600"} />}
     </button>
   );
 }

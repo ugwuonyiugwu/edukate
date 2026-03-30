@@ -47,6 +47,14 @@ export const quizRouter = createTRPCRouter({
       });
 
       if (!quiz || !user) throw new TRPCError({ code: "NOT_FOUND" });
+      
+      // BLOCK JOINING if within 1 hour of start (Matching frontend logic)
+      const startTime = new Date(`${quiz.date}T${quiz.time}:00`).getTime();
+      const hourBefore = startTime - (60 * 60 * 1000);
+      if (Date.now() > hourBefore) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Registration is closed for this mission." });
+      }
+
       if (user.points < quiz.points) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient points." });
 
       const existing = await ctx.db.query.participants.findFirst({
@@ -84,7 +92,6 @@ export const quizRouter = createTRPCRouter({
       if (!user) throw new TRPCError({ code: "NOT_FOUND" });
       if (user.points < input.points) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient points." });
 
-      // 1. Deduct points using SQL math
       await ctx.db.update(users)
         .set({ points: sql`${users.points} - ${input.points}` })
         .where(eq(users.clerkId, userId));
@@ -100,7 +107,6 @@ export const quizRouter = createTRPCRouter({
           updatedAt: new Date(),
         }).returning();
 
-        // Host joins for free (points already deducted as creation cost)
         await ctx.db.insert(participants).values({ quizId: newQuiz.id, clerkId: userId });
         return newQuiz;
 
@@ -195,7 +201,15 @@ export const quizRouter = createTRPCRouter({
       wrongAnswer3: z.string().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
-      // 1. Count existing submissions for this user/quiz
+      const quiz = await ctx.db.query.quizzes.findFirst({ where: eq(quizzes.id, input.quizId) });
+      if (!quiz) throw new TRPCError({ code: "NOT_FOUND" });
+
+      // BLOCK SUBMISSIONS after the quiz has started
+      const startTime = new Date(`${quiz.date}T${quiz.time}:00`).getTime();
+      if (Date.now() > startTime) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Submission period has ended." });
+      }
+
       const existing = await ctx.db
         .select({ count: count() })
         .from(submissions)
@@ -209,11 +223,10 @@ export const quizRouter = createTRPCRouter({
       if (existing[0].count >= 20) {
         throw new TRPCError({ 
           code: "BAD_REQUEST", 
-          message: "Mission limit reached: You have already submitted 20 questions for this mission." 
+          message: "Mission limit reached: 20 questions already submitted." 
         });
       }
 
-      // 2. Insert the new question
       return await ctx.db.insert(submissions).values({
         quizId: input.quizId,
         clerkId: ctx.clerkUserId!,
@@ -226,7 +239,7 @@ export const quizRouter = createTRPCRouter({
       });
     }),
 
-    getQuizQuestions: protectedProcedure
+  getQuizQuestions: protectedProcedure
     .input(z.object({ quizId: z.string() }))
     .query(async ({ ctx, input }) => {
       const questions = await ctx.db.query.submissions.findMany({
@@ -235,7 +248,6 @@ export const quizRouter = createTRPCRouter({
       return questions.sort(() => Math.random() - 0.5);
     }),
 
-  // 2. Submit the user's final score
   submitFinalScore: protectedProcedure
     .input(z.object({ quizId: z.string(), score: z.number() }))
     .mutation(async ({ ctx, input }) => {
@@ -247,26 +259,35 @@ export const quizRouter = createTRPCRouter({
         ));
     }),
 
-  // 3. Get all active participants (for the elimination arena)
+  // 3. Get all active participants (AUTOMATED TIME CHECK)
   getLiveParticipants: protectedProcedure
     .input(z.object({ quizId: z.string() }))
     .query(async ({ ctx, input }) => {
+      const quiz = await ctx.db.query.quizzes.findFirst({ where: eq(quizzes.id, input.quizId) });
+      if (!quiz) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const startTime = new Date(`${quiz.date}T${quiz.time}:00`).getTime();
+      
+      // If someone tries to fetch the leaderboard before the clock hits zero, return empty
+      if (Date.now() < startTime) return [];
+
       return await ctx.db.query.participants.findMany({
         where: and(
           eq(participants.quizId, input.quizId),
           eq(participants.isEliminated, false)
         ),
         orderBy: [desc(participants.score)],
+        with: { user: true } // Added user inclusion for the live leaderboard
       });
     }),
 
-  // 4. The "Executioner" - Eliminates the lowest scorer
+  // 4. The "Executioner"
   eliminateLowest: protectedProcedure
     .input(z.object({ quizId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const active = await ctx.db.query.participants.findMany({
         where: and(eq(participants.quizId, input.quizId), eq(participants.isEliminated, false)),
-        orderBy: [asc(participants.score)] // Smallest score first
+        orderBy: [asc(participants.score)] 
       });
 
       if (active.length <= 1) return { winner: active[0] };
