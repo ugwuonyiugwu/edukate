@@ -6,9 +6,10 @@ import { UserQuizCard } from './components/UserQuizCard';
 import { CreateQuizDialog } from './components/CreateQuizDialog';
 import { RecentQuizCard } from './components/RecentQuizCard';
 import { PublicQuizCard } from './components/PublicQuizCard';
-import { BookOpen, Loader2, History } from 'lucide-react';
+import { BookOpen, Loader2, History, ChevronLeft } from 'lucide-react';
 import { toast } from "sonner";
 import { Card } from '@/components/ui/card';
+import Link from 'next/link';
 
 interface StatCardProps {
   label: string;
@@ -57,6 +58,16 @@ export const QuizDashboardView = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-10 md:pb-20">
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 md:pt-8 flex items-center justify-between">
+              <Link href="/dashboard" className="group flex items-center gap-2 text-slate-500 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all hover:text-indigo-600">
+                <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
+                  <ChevronLeft size={16} />
+                </div>
+                <span>Home</span>
+              </Link>
+            </div>
+
       {/* HEADER SECTION */}
       <div className="bg-[#0B1221] text-white p-6 md:p-10 mx-4 lg:mx-8 mt-6 rounded-sm shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">

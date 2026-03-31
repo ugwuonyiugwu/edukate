@@ -1,7 +1,7 @@
 'use client';
 
 import { trpc } from "@/trpc/client";
-import { Loader2, BookOpen, Search, Download, ArrowRight } from "lucide-react";
+import { Loader2, BookOpen, Search, Download, ArrowRight, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,17 @@ export default function DiscoveryPage() {
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto min-h-screen bg-[#FAFAFA]">
       {/* Header Section */}
-      <div className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
+
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 pt-6 md:flex items-center justify-between">
+              <Link href="/dashboard" className="group flex items-center gap-2 text-slate-500 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all hover:text-indigo-600">
+                <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
+                  <ChevronLeft size={16} />
+                </div>
+                <span>Home</span>
+              </Link>
+            </div>
+
+      <div className="mb-12 mt-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-gray-900 tracking-tight">
             Explore Libraries
