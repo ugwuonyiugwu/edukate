@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { trpc } from "@/trpc/client"; 
+import { trpc } from "@/trpc/client";
 import { UserQuizCard } from './components/UserQuizCard';
 import { CreateQuizDialog } from './components/CreateQuizDialog';
 import { RecentQuizCard } from './components/RecentQuizCard';
-import { PublicQuizCard } from './components/PublicQuizCard'; 
+import { PublicQuizCard } from './components/PublicQuizCard';
 import { BookOpen, Loader2, History } from 'lucide-react';
 import { toast } from "sonner";
 import { Card } from '@/components/ui/card';
@@ -24,7 +24,7 @@ export const QuizDashboardView = () => {
   const { data: user } = trpc.users.getOne.useQuery();
   const { data: quizzes, isLoading: isQuizzesLoading } = trpc.quiz.getMyQuizzes.useQuery();
   const { data: allQuizzes, isLoading: isAllQuizzesLoading } = trpc.quiz.getAllQuizzes.useQuery();
-  
+
   const { data: serverOffset = 0 } = trpc.quiz.getServerTime.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
@@ -65,13 +65,13 @@ export const QuizDashboardView = () => {
             <p className="text-slate-400 text-xs md:text-sm">Design challenges and monitor student entry.</p>
           </div>
           <div className="w-full sm:w-auto">
-            <CreateQuizDialog 
-              isOpen={isDialogOpen} 
-              setIsOpen={setIsDialogOpen} 
+            <CreateQuizDialog
+              isOpen={isDialogOpen}
+              setIsOpen={setIsDialogOpen}
               onSubmit={(data) => createMutation.mutate(data)}
               isPending={createMutation.isPending}
               userPoints={user?.points ?? 0}
-              serverOffset={serverOffset} 
+              serverOffset={serverOffset}
             />
           </div>
         </div>
@@ -79,7 +79,7 @@ export const QuizDashboardView = () => {
 
       <main className="max-w-7xl mx-auto px-4 lg:px-8 mt-8 space-y-10 md:space-y-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           <Card className="lg:col-span-2 p-5 md:p-6 rounded-sm border-blue-400 shadow-sm bg-white">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
               <h2 className="text-lg font-bold text-slate-700">Performance Overview</h2>
@@ -93,8 +93,8 @@ export const QuizDashboardView = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
               <StatItem label="Available Pts" value={user?.points ?? 0} color="text-amber-500" />
               <StatItem label="Wins" value="0" color="text-green-600" />
-              <StatItem label="Draws" value="0" color="text-blue-600"/>
-              <StatItem label="Losses" value="0" color="text-red-600"/>
+              <StatItem label="Draws" value="0" color="text-blue-600" />
+              <StatItem label="Losses" value="0" color="text-red-600" />
             </div>
           </Card>
 
@@ -103,13 +103,13 @@ export const QuizDashboardView = () => {
               <h2 className="text-sm font-black text-slate-700 uppercase tracking-tighter">Live Status</h2>
               <History size={16} className="text-slate-400" />
             </div>
-            
+
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
               {isAllQuizzesLoading ? (
                 <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-300" /></div>
               ) : allQuizzes?.length ? (
                 allQuizzes.slice(0, 6).map((quiz) => (
-                  <RecentQuizCard 
+                  <RecentQuizCard
                     key={quiz.id}
                     {...quiz}
                     serverOffset={serverOffset}
@@ -137,11 +137,11 @@ export const QuizDashboardView = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {quizzes?.length ? quizzes.map((quiz) => (
-                <UserQuizCard 
-                  key={quiz.id} 
-                  {...quiz} 
+                <UserQuizCard
+                  key={quiz.id}
+                  {...quiz}
                   serverOffset={serverOffset}
-                  onDelete={() => deleteMutation.mutate({ id: quiz.id })} 
+                  onDelete={() => deleteMutation.mutate({ id: quiz.id })}
                 />
               )) : (
                 <div className="col-span-full py-16 md:py-20 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
@@ -163,8 +163,8 @@ export const QuizDashboardView = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {allQuizzes?.map((quiz) => (
-              <PublicQuizCard 
-                key={quiz.id} 
+              <PublicQuizCard
+                key={quiz.id}
                 {...quiz}
                 serverOffset={serverOffset}
               />
