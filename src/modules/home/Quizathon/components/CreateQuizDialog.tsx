@@ -65,7 +65,7 @@ export function CreateQuizDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-[#5D5FEF] hover:bg-[#4a4cd9] rounded-xl px-8 py-6 font-bold gap-2 w-full sm:w-auto shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+        <Button className="bg-[#5D5FEF] hover:bg-[#4a4cd9] rounded-sm px-8 py-6 font-bold gap-2 w-full sm:w-auto shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
           <Plus size={20} /> Create New Quiz
         </Button>
       </DialogTrigger>

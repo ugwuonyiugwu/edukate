@@ -11,6 +11,23 @@ import { toast } from "sonner";
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 
+// --- UPDATED TYPES ---
+interface Participant {
+  clerkId: string;
+}
+
+interface Quiz {
+  id: string;
+  title: string;
+  category: string;
+  points: number;
+  date: string;
+  time: string;
+  clerkId: string;
+  // Make participants optional to match potential database states
+  participants?: Participant[]; 
+}
+
 interface StatCardProps {
   label: string;
   value: number | string;
@@ -21,7 +38,6 @@ export const QuizDashboardView = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const utils = trpc.useUtils();
 
-  // 1. Fetch Data
   const { data: user } = trpc.users.getOne.useQuery();
   const { data: quizzes, isLoading: isQuizzesLoading } = trpc.quiz.getMyQuizzes.useQuery();
   const { data: allQuizzes, isLoading: isAllQuizzesLoading } = trpc.quiz.getAllQuizzes.useQuery();
@@ -29,13 +45,9 @@ export const QuizDashboardView = () => {
   const { data: serverOffset = 0 } = trpc.quiz.getServerTime.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
-    select: (data) => {
-      // This runs only when data arrives/changes, NOT on every render.
-      return data.serverTime - Date.now();
-    }
+    select: (data) => data.serverTime - Date.now()
   });
 
-  // 3. Mutations
   const createMutation = trpc.quiz.create.useMutation({
     onSuccess: () => {
       toast.success("Quiz launched successfully!");
@@ -58,17 +70,15 @@ export const QuizDashboardView = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-10 md:pb-20">
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 md:pt-8 flex items-center justify-between">
-              <Link href="/dashboard" className="group flex items-center gap-2 text-slate-500 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all hover:text-indigo-600">
-                <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
-                  <ChevronLeft size={16} />
-                </div>
-                <span>Home</span>
-              </Link>
-            </div>
+        <Link href="/dashboard" className="group flex items-center gap-2 text-slate-500 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all hover:text-indigo-600">
+          <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
+            <ChevronLeft size={16} />
+          </div>
+          <span>Home</span>
+        </Link>
+      </div>
 
-      {/* HEADER SECTION */}
       <div className="bg-[#0B1221] text-white p-6 md:p-10 mx-4 lg:mx-8 mt-6 rounded-sm shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
           <div className="space-y-2">
@@ -88,9 +98,9 @@ export const QuizDashboardView = () => {
         </div>
       </div>
 
+
       <main className="max-w-7xl mx-auto px-4 lg:px-8 mt-8 space-y-10 md:space-y-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
           <Card className="lg:col-span-2 p-5 md:p-6 rounded-sm border-blue-400 shadow-sm bg-white">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
               <h2 className="text-lg font-bold text-slate-700">Performance Overview</h2>
@@ -109,7 +119,7 @@ export const QuizDashboardView = () => {
             </div>
           </Card>
 
-          <Card className="p-4 rounded-xl border-slate-200 shadow-sm bg-white flex flex-col min-h-[400px] lg:h-[450px]">
+          <Card className="p-4 rounded-xl border-slate-200 shadow-sm bg-white flex flex-col min-h-100 lg:h-112.5">
             <div className="mb-4 flex items-center justify-between px-2">
               <h2 className="text-sm font-black text-slate-700 uppercase tracking-tighter">Live Status</h2>
               <History size={16} className="text-slate-400" />
@@ -146,18 +156,25 @@ export const QuizDashboardView = () => {
               <Loader2 className="animate-spin text-[#5D5FEF]" size={40} />
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {quizzes?.length ? quizzes.map((quiz) => (
-                <UserQuizCard
-                  key={quiz.id}
-                  {...quiz}
-                  serverOffset={serverOffset}
-                  onDelete={() => deleteMutation.mutate({ id: quiz.id })}
-                />
-              )) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-4">
+              {(quizzes as unknown as Quiz[] | undefined)?.length ? (quizzes as unknown as Quiz[]).map((quiz) => {
+                const isCreator = quiz.clerkId === user?.clerkId;
+                const isJoined = quiz.participants?.some((p) => p.clerkId === user?.clerkId) ?? false;
+
+                return (
+                  <UserQuizCard
+                    key={quiz.id}
+                    {...quiz}
+                    isCreator={isCreator}
+                    isJoined={isJoined}
+                    serverOffset={serverOffset}
+                    onDelete={() => deleteMutation.mutate({ id: quiz.id })}
+                  />
+                );
+              }) : (
                 <div className="col-span-full py-16 md:py-20 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
                   <BookOpen size={48} className="mx-auto text-slate-300 mb-4" />
-                  <p className="text-slate-400 font-bold px-4">You haven&apos;t created any quizzes yet.</p>
+                  <p className="text-slate-400 font-bold px-4">You haven&apos;t created or joined any quizzes yet.</p>
                 </div>
               )}
             </div>
@@ -165,14 +182,12 @@ export const QuizDashboardView = () => {
         </section>
 
         <section className="pt-6 md:pt-10">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-3">
-              <div className="h-6 md:h-8 w-1.5 bg-blue-600 rounded-full" />
-              <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Explore Live Quizzes</h2>
-            </div>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="h-6 md:h-8 w-1.5 bg-blue-600 rounded-full" />
+            <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Explore Live Quizzes</h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-4">
             {allQuizzes?.map((quiz) => (
               <PublicQuizCard
                 key={quiz.id}
@@ -185,7 +200,7 @@ export const QuizDashboardView = () => {
       </main>
     </div>
   );
-}
+};
 
 function StatItem({ label, value, color = "text-slate-800" }: StatCardProps) {
   return (

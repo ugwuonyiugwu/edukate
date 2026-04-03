@@ -1,8 +1,7 @@
-// @/modules/home/Quizathon/server/procedure.ts
-import { db } from "@/db";
+
 import { quizzes, users, participants, submissions } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
-import { eq, desc, and, sql, count, asc } from "drizzle-orm";
+import { eq, desc, and, sql, count, asc, ne } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
@@ -164,14 +163,54 @@ export const quizRouter = createTRPCRouter({
       return result;
     }),
 
-  getAllQuizzes: protectedProcedure.query(async () => {
-    return await db.select().from(quizzes).orderBy(desc(quizzes.createdAt)).limit(10);
+ getAllQuizzes: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.clerkUserId!;
+
+    return await ctx.db.query.quizzes.findMany({
+      where: (quizzes, { and, notExists }) => and(
+        ne(quizzes.clerkId, userId),
+        notExists(
+          ctx.db.select()
+            .from(participants)
+            .where(
+              and(
+                eq(participants.quizId, quizzes.id),
+                eq(participants.clerkId, userId)
+              )
+            )
+        )
+      ),
+      orderBy: [desc(quizzes.createdAt)],
+      limit: 10,
+      with: {
+        participants: true,
+      },
+    });
   }),
 
   getMyQuizzes: protectedProcedure.query(async ({ ctx }) => {
-    return await db.select().from(quizzes).where(eq(quizzes.clerkId, ctx.clerkUserId!)).orderBy(desc(quizzes.createdAt));
-  }),
+    const userId = ctx.clerkUserId!;
 
+    return await ctx.db.query.quizzes.findMany({
+      where: (quizzes, { eq, or, exists }) => or(
+        eq(quizzes.clerkId, userId),
+        exists(
+          ctx.db.select()
+            .from(participants)
+            .where(
+              and(
+                eq(participants.quizId, quizzes.id),
+                eq(participants.clerkId, userId)
+              )
+            )
+        )
+      ),
+      orderBy: [desc(quizzes.createdAt)],
+      with: {
+        participants: true, // This is required for the frontend isJoined check
+      },
+    });
+  }),
   getServerTime: protectedProcedure.query(() => ({ serverTime: Date.now() })),
 
   // --- SUBMISSION PROCEDURES ---

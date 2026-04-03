@@ -125,7 +125,7 @@ export const QuizDetailsView = ({ quizId }: { quizId: string }) => {
   const time = formatCountdown(currentMs);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-10 md:pb-20 font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] pb-10 md:pb-20 font-sans ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 md:pt-8 flex items-center justify-between">
         <Link href="/quizathon" className="group flex items-center gap-2 text-slate-500 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all hover:text-indigo-600">
           <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
@@ -222,7 +222,7 @@ export const QuizDetailsView = ({ quizId }: { quizId: string }) => {
               {quiz.participants.map((p) => (
                 <div key={p.clerkId} className="flex items-center justify-between group p-x-2 p-1 hover:border-slate-100 transition-all">
                   <div className="flex items-center  gap-3">
-                    <div className="w-10 h-10 rounded-sm bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xs">
+                    <div className="w-10 h-10 rounded-sm bg-indigo-100 flex uppercase items-center justify-center text-indigo-600 font-black text-xs">
                       {p.user?.username?.[0] || 'Unknown'}
                     </div>
                     <div className="flex flex-col">

@@ -5,7 +5,7 @@ import { trpc } from "@/trpc/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from 'lucide-react';
 
-import { QuizHeader } from '../components/QuizHeader';
+import { QuizHeader  } from '../components/QuizHeader';
 import { QuestionCard } from '../components/QuestionCard';
 import { EliminationArena } from '../components/EliminationArena';
 
