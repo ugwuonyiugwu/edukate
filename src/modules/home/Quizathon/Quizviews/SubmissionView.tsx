@@ -1,38 +1,69 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react'; // Added useEffect, useMemo
 import { trpc } from "@/trpc/client";
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { toast } from "sonner";
 import { UploadDropzone } from '@/app/utils/uploadthing';
 import { 
-  ArrowRight, Image as ImageIcon, Type, 
-  Loader2, ChevronLeft, Zap, CheckCircle2
+  ArrowLeft, Image as ImageIcon, Type, 
+  Loader2,  Info, 
+  Check, Hash, Trash2, Clock // Added Clock icon
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 export const SubmissionView = ({ quizId }: { quizId: string }) => {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [imageUrl, setImageUrl] = useState("");
+  const [msLeft, setMsLeft] = useState<number | null>(null); // State for countdown
   const utils = trpc.useUtils();
   
-  // 1. Fetch quiz data and user's current submission count
   const [quiz] = trpc.quiz.getOne.useSuspenseQuery({ id: quizId });
   const { data: submissionCount = 0 } = trpc.quiz.getUserSubmissionCount.useQuery({ quizId });
 
-  const submitMutation = trpc.quiz.submitWork.useMutation({
-    onSuccess: () => {
-      toast.success(`Question ${submissionCount + 1}/20 Submitted!`);
-      setImageUrl(""); // Reset image for next question
-      utils.quiz.getUserSubmissionCount.invalidate({ quizId });
+  // --- LIVE REDIRECT LOGIC ---
+  useEffect(() => {
+    if (!quiz) return;
+
+    const target = new Date(`${quiz.date}T${quiz.time}:00`).getTime();
+
+    const ticker = setInterval(() => {
+      const now = new Date().getTime();
+      const diff = target - now;
       
-      if (submissionCount + 1 >= 20) {
+      setMsLeft(Math.max(0, diff));
+
+      // If time hits 0, force redirect to the quiz details page
+      if (diff <= 0) {
+        clearInterval(ticker);
+        toast.error("Upload window closed. Quiz is starting!");
         router.push(`/quizathon/${quizId}`);
       }
+    }, 1000);
+
+    return () => clearInterval(ticker);
+  }, [quiz, quizId, router]);
+
+  const timeString = useMemo(() => {
+    if (msLeft === null) return "--:--";
+    const m = Math.floor(msLeft / 60000).toString().padStart(2, '0');
+    const s = Math.floor((msLeft / 1000) % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }, [msLeft]);
+
+  // --- REST OF YOUR LOGIC ---
+
+  const submitMutation = trpc.quiz.submitWork.useMutation({
+    onSuccess: () => {
+      toast.success(`Saved Question ${submissionCount + 1}`);
+      setImageUrl("");
+      formRef.current?.reset();
+      utils.quiz.getUserSubmissionCount.invalidate({ quizId });
+      if (submissionCount + 1 >= 20) router.push(`/quizathon/${quizId}`);
     },
     onError: (err) => toast.error(err.message)
   });
@@ -40,7 +71,6 @@ export const SubmissionView = ({ quizId }: { quizId: string }) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
     submitMutation.mutate({
       quizId,
       questionText: formData.get('question') as string,
@@ -50,107 +80,160 @@ export const SubmissionView = ({ quizId }: { quizId: string }) => {
       wrongAnswer2: formData.get('wrong2') as string,
       wrongAnswer3: formData.get('wrong3') as string,
     });
-    e.currentTarget.reset(); // Clear form for next entry
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 p-4 md:p-12">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Progress Tracker */}
-        <div className="flex items-center justify-between bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
-          <div className="flex items-center gap-4">
-             <div className="p-3 bg-indigo-500/20 rounded-xl text-indigo-400">
-               <Zap size={20} />
-             </div>
-             <div>
-               <h2 className="text-sm font-black uppercase tracking-widest text-white">Question Intel {submissionCount}/20</h2>
-               <div className="w-48 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                 <div 
-                   className="h-full bg-indigo-500 transition-all duration-500" 
-                   style={{ width: `${(submissionCount / 20) * 100}%` }}
-                 />
-               </div>
-             </div>
-          </div>
-          <button onClick={() => router.back()} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
-            Exit Mission
-          </button>
-        </div>
+    <div className="min-h-screen bg-[#0A0A0A] text-slate-400 font-sans antialiased selection:bg-white selection:text-black">
+      
+      {/* progress bar */}
+      <div className="fixed top-0 left-0 w-full h-1 bg-white/5 z-50">
+        <div 
+          className="h-full bg-white transition-all duration-1000 ease-out" 
+          style={{ width: `${(submissionCount / 20) * 100}%` }} 
+        />
+      </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Side: Question & Visuals */}
-          <div className="space-y-6">
-            <Card className="p-6 bg-slate-900/40 border-slate-800 backdrop-blur-xl">
-              <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-400 mb-4">
-                <Type size={16} /> Question Data
-              </label>
+      <div className="max-w-6xl mx-auto px-6 py-16">
+        
+        <header className="flex items-center justify-between mb-20">
+          <div className="space-y-5">
+            <h1 className="text-white text-sm font-medium tracking-tight uppercase">
+              {quiz?.title || "Quiz Studio"}
+            </h1>
+            <div className="flex items-center gap-6">
+               <p className="text-[15px] text-white font-bold">
+                 Uploaded Question {submissionCount + 1} <span className="mx-2">/</span> 20
+               </p>
+               {/* Added Countdown Display */}
+               <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                 <Clock size={12} className={msLeft && msLeft < 60000 ? "text-rose-500 animate-pulse" : "text-white"} />
+                 <span className={`text-[11px] font-black tabular-nums ${msLeft && msLeft < 60000 ? "text-rose-500" : "text-white"}`}>
+                   {timeString}
+                 </span>
+               </div>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            onClick={() => router.back()} 
+            className="text-white text-[10px] font-bold uppercase tracking-widest"
+          >
+            <ArrowLeft className="mr-2" size={14}/> Back
+          </Button>
+        </header>
+
+        <form ref={formRef} onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+          
+          <div className="lg:col-span-7 space-y-12">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                <Type size={12} /> The Challenge
+              </div>
               <Textarea 
                 name="question"
                 required
-                placeholder="Ex: What is the primary function of a reverse proxy?"
-                className="bg-slate-950 border-slate-800 text-white min-h-[120px] rounded-xl"
+                placeholder="Write your question here..."
+                className="w-full bg-white/5 border-none text-white text-3xl font-light p-5 focus-visible:ring-0 placeholder:text-white/10 resize-none min-h-[150px]"
               />
-            </Card>
-
-            <Card className="p-6 bg-slate-900/40 border-slate-800">
-              <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-400 mb-4">
-                <ImageIcon size={16} /> Visual Intelligence
-              </label>
-              
-              {imageUrl ? (
-                <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-indigo-500/50">
-                  <Image src={imageUrl} alt="Uploaded" fill className="object-cover" />
-                  <button 
-                    onClick={() => setImageUrl("")}
-                    className="absolute top-2 right-2 p-1 bg-red-500 rounded-full text-white shadow-lg"
-                  >
-                    <ChevronLeft size={16} className="rotate-45" />
-                  </button>
-                </div>
-              ) : (
-               <UploadDropzone
-                endpoint="imageUploader"
-                onClientUploadComplete={(res) => {
-                    setImageUrl(res[0].url);
-                    toast.success("Image secured!");
-                }}
-                onUploadError={(error: Error) => {
-                    // Adding curly braces ensures the function returns 'void'
-                    toast.error(`Upload failed: ${error.message}`);
-                }}
-                className="ut-label:text-indigo-400 ut-button:bg-indigo-600 border-slate-800 bg-slate-950/50"
-                />
-              )}
-            </Card>
-          </div>
-
-          {/* Right Side: Answers */}
-          <div className="space-y-6">
-            <div className="space-y-4">
-               <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
-                 <label className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-2">The Absolute Truth</label>
-                 <Input name="correct" required placeholder="Correct answer..." className="bg-slate-950 border-emerald-500/30 text-white" />
-               </div>
-
-               {['1', '2', '3'].map((i) => (
-                 <div key={i} className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
-                   <label className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] block mb-2">Decoy Intelligence #{i}</label>
-                   <Input name={`wrong${i}`} required placeholder="Wrong answer..." className="bg-slate-950 border-rose-500/30 text-white" />
-                 </div>
-               ))}
             </div>
 
-            <Button 
-              type="submit" 
-              disabled={submitMutation.isPending}
-              className="w-full h-20 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-indigo-500/20"
-            >
-              {submitMutation.isPending ? <Loader2 className="animate-spin" /> : (
-                <span className="flex items-center gap-3">
-                  Log Question {submissionCount + 1} <ArrowRight size={20} />
-                </span>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white">
+                <ImageIcon size={12} /> Supporting Imagery
+              </div>
+              
+              {imageUrl ? (
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-white/2 border border-white/5 group transition-all">
+                  <Image 
+                    src={imageUrl} 
+                    alt="Uploaded preview" 
+                    fill 
+                    className="object-contain p-4" 
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
+                    <Button 
+                      type="button" 
+                      onClick={() => setImageUrl("")} 
+                      className="bg-white text-black hover:bg-slate-200 rounded-sm px-4 text-[10px] font-bold uppercase tracking-widest h-9"
+                    >
+                      <Trash2 size={14} className="mr-2" /> Delete Media
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg bg-white/2 border border-dashed border-white/5 hover:bg-white/4 transition-all text-center group">
+                  <UploadDropzone
+                    endpoint="imageUploader"
+                    onClientUploadComplete={(res) => {
+                      if (res?.[0]) {
+                        setImageUrl(res[0].url);
+                        toast.success("Media secured");
+                      }
+                    }}
+                    onUploadError={(error: Error) => {
+                      toast.error(`Upload failed: ${error.message}`);
+                    }}
+                    className="border-none ut-label:text-slate-600 ut-button:bg-white ut-button:text-black ut-button:text-[10px] ut-button:font-bold ut-button:uppercase ut-button:tracking-widest ut-button:px-4 ut-button:rounded-sm ut-allowed-content:text-slate-700"
+                  />
+                </div>
               )}
-            </Button>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 space-y-10">
+            <div className="space-y-8">
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <label className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                    <Check size={12} /> Correct Answer
+                  </label>
+                </div>
+                <Input 
+                  name="correct" 
+                  required 
+                  placeholder="Type the truth..." 
+                  className="bg-white/5 border-none text-white h-12 rounded-lg px-4 text-sm focus-visible:ring-1 focus-visible:ring-white/20 transition-all placeholder:text-slate-700" 
+                />
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-2 px-1">
+                  <Hash size={12} /> Wrong Options
+                </label>
+                {['1', '2', '3'].map((i) => (
+                  <Input 
+                    key={i}
+                    name={`wrong${i}`} 
+                    required 
+                    placeholder={`Alternative #${i}`} 
+                    className="bg-white/5 border-none text-white h-12 rounded-lg px-4 text-sm focus-visible:ring-1 focus-visible:ring-white/10 transition-all placeholder:text-slate-800" 
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-8 space-y-6">
+              <Button 
+                type="submit" 
+                disabled={submitMutation.isPending || (msLeft !== null && msLeft <= 0)}
+                className="w-full h-14 bg-white text-black hover:bg-slate-200 font-bold uppercase tracking-[0.2em] text-[10px] rounded-lg transition-all"
+              >
+                {submitMutation.isPending ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <>Save Question & Continue</>
+                )}
+              </Button>
+              
+              <div className="flex gap-3 text-slate-700">
+                <Info size={14} className="shrink-0" />
+                <p className="text-[9px] font-bold uppercase tracking-widest leading-relaxed italic">
+                  Saved data is encrypted. Questions cannot be edited once saved.
+                </p>
+              </div>
+            </div>
           </div>
         </form>
       </div>

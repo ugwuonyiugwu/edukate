@@ -4,8 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { trpc } from "@/trpc/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from 'lucide-react';
-
-import { QuizHeader  } from '../components/QuizHeader';
+import { QuizHeader } from '../components/QuizHeader';
 import { QuestionCard } from '../components/QuestionCard';
 import { EliminationArena } from '../components/EliminationArena';
 
@@ -16,11 +15,11 @@ export const QuizSessionView = ({ quizId }: { quizId: string }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [answeredIndices, setAnsweredIndices] = useState<Set<number>>(new Set());
   const [now, setNow] = useState(() => Date.now());
 
   const submitScoreMutation = trpc.quiz.submitFinalScore.useMutation();
 
-  // Ticker Logic: Updates time and handles auto-submission
   useEffect(() => {
     const ticker = setInterval(() => {
       const currentTime = Date.now();
@@ -48,27 +47,25 @@ export const QuizSessionView = ({ quizId }: { quizId: string }) => {
   }, [quiz, now]);
 
   const handleAnswer = (selected: string) => {
-    if (isEliminationMode || feedback || submitScoreMutation.isPending) return;
+    // Prevent answering twice or answering after time/score submission
+    if (answeredIndices.has(currentIndex) || feedback || submitScoreMutation.isPending) return;
     
     const isCorrect = selected === questions[currentIndex].correctAnswer;
     if (isCorrect) setScore(prev => prev + 10);
     setFeedback(isCorrect ? 'correct' : 'wrong');
+    setAnsweredIndices(prev => new Set(prev).add(currentIndex));
 
     setTimeout(() => {
       setFeedback(null);
       if (currentIndex < questions.length - 1) {
         setCurrentIndex(prev => prev + 1);
       }
-    }, 600);
+    }, 800);
   };
 
   if (quizLoading) return <div className="h-screen flex items-center justify-center bg-slate-950"><Loader2 className="animate-spin text-emerald-500 w-12 h-12" /></div>;
 
-  if (isEliminationMode) {
-    return <EliminationArena quizId={quizId} userFinalScore={score} />;
-  }
-
-  return (
+  const MainQuizUI = (
     <div className="min-h-screen bg-white flex flex-col overflow-hidden font-sans">
       <QuizHeader 
         currentIndex={currentIndex} 
@@ -77,7 +74,7 @@ export const QuizSessionView = ({ quizId }: { quizId: string }) => {
         score={score} 
       />
 
-      <main className="flex-1 p-6 flex flex-col items-center justify-center max-w-4xl mx-auto w-full">
+      <main className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div 
             key={currentIndex}
@@ -89,13 +86,13 @@ export const QuizSessionView = ({ quizId }: { quizId: string }) => {
             <QuestionCard 
               question={questions[currentIndex]} 
               feedback={feedback} 
-              onAnswer={handleAnswer} 
+              onAnswer={handleAnswer}
+              isAnswered={answeredIndices.has(currentIndex)}
             />
           </motion.div>
         </AnimatePresence>
       </main>
       
-      {/* Footer Progress Bar */}
       <div className="w-full h-2 bg-slate-100">
         <motion.div 
           className="h-full bg-[#00a884]"
@@ -105,4 +102,15 @@ export const QuizSessionView = ({ quizId }: { quizId: string }) => {
       </div>
     </div>
   );
+
+  // If in elimination mode, wrap the UI so survivors can still see and answer questions
+  if (isEliminationMode) {
+    return (
+      <EliminationArena quizId={quizId} userFinalScore={score}>
+        {MainQuizUI}
+      </EliminationArena>
+    );
+  }
+
+  return MainQuizUI;
 };

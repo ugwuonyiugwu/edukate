@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { trpc } from "@/trpc/client";
 import { UserQuizCard } from './components/UserQuizCard';
 import { CreateQuizDialog } from './components/CreateQuizDialog';
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 
-// --- UPDATED TYPES ---
+// --- TYPES ---
 interface Participant {
   clerkId: string;
 }
@@ -24,7 +24,6 @@ interface Quiz {
   date: string;
   time: string;
   clerkId: string;
-  // Make participants optional to match potential database states
   participants?: Participant[]; 
 }
 
@@ -36,6 +35,10 @@ interface StatCardProps {
 
 export const QuizDashboardView = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // FIX: Use a stable state for current time to satisfy "pure render" rules
+  const [now] = useState(() => Date.now());
+  
   const utils = trpc.useUtils();
 
   const { data: user } = trpc.users.getOne.useQuery();
@@ -47,6 +50,19 @@ export const QuizDashboardView = () => {
     staleTime: Infinity,
     select: (data) => data.serverTime - Date.now()
   });
+
+  // --- LOGIC: Filter Expired Quizzes from YOUR Library ---
+  const expiredMissions = useMemo(() => {
+    if (!quizzes) return [];
+    
+    return (quizzes as unknown as Quiz[]).filter((quiz) => {
+      // Create a stable target time from the quiz date/time strings
+      const targetTime = new Date(`${quiz.date}T${quiz.time}:00`).getTime();
+      
+      // Use the stable 'now' state instead of calling Date.now() inside the filter
+      return now > targetTime; 
+    });
+  }, [quizzes, now]);
 
   const createMutation = trpc.quiz.create.useMutation({
     onSuccess: () => {
@@ -69,7 +85,7 @@ export const QuizDashboardView = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-10 md:pb-20">
+    <div className="min-h-screen bg-[#F8FAFC] pb-10 md:pb-20 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 md:pt-8 flex items-center justify-between">
         <Link href="/dashboard" className="group flex items-center gap-2 text-slate-500 font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all hover:text-indigo-600">
           <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
@@ -98,7 +114,6 @@ export const QuizDashboardView = () => {
         </div>
       </div>
 
-
       <main className="max-w-7xl mx-auto px-4 lg:px-8 mt-8 space-y-10 md:space-y-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 p-5 md:p-6 rounded-sm border-blue-400 shadow-sm bg-white">
@@ -119,32 +134,38 @@ export const QuizDashboardView = () => {
             </div>
           </Card>
 
-          <Card className="p-4 rounded-xl border-slate-200 shadow-sm bg-white flex flex-col min-h-100 lg:h-112.5">
-            <div className="mb-4 flex items-center justify-between px-2">
-              <h2 className="text-sm font-black text-slate-700 uppercase tracking-tighter">Live Status</h2>
+          {/* SIDEBAR: MISSION HISTORY */}
+          <Card className="p-4 rounded-sm border-blue-600 shadow-sm bg-white flex flex-col min-h-100 lg:h-112.5">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-lg font-black text-slate-700 tracking-tighter">Mission History</h2>
               <History size={16} className="text-slate-400" />
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
-              {isAllQuizzesLoading ? (
+              {isQuizzesLoading ? (
                 <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-300" /></div>
-              ) : allQuizzes?.length ? (
-                allQuizzes.slice(0, 6).map((quiz) => (
+              ) : expiredMissions.length > 0 ? (
+                expiredMissions.slice(0, 6).map((quiz) => (
                   <RecentQuizCard
+                    id={quiz.id}
                     key={quiz.id}
-                    {...quiz}
-                    serverOffset={serverOffset}
+                    category={quiz.category}
+                    title={quiz.title}
+                    points={quiz.points}
+                    date={quiz.date}
+                    time={quiz.time}
                   />
                 ))
               ) : (
-                <div className="text-center py-20">
-                  <p className="text-[10px] font-bold text-slate-400">Waiting for activity...</p>
+                <div className="text-center py-20 px-4">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No Past Missions Found</p>
                 </div>
               )}
             </div>
           </Card>
         </div>
 
+        {/* YOUR LIBRARY SECTION */}
         <section>
           <div className="flex items-center gap-3 mb-6 md:mb-8">
             <div className="h-6 md:h-8 w-1.5 bg-[#5D5FEF] rounded-full" />
@@ -181,6 +202,7 @@ export const QuizDashboardView = () => {
           )}
         </section>
 
+        {/* EXPLORE SECTION */}
         <section className="pt-6 md:pt-10">
           <div className="flex items-center gap-3 mb-8">
             <div className="h-6 md:h-8 w-1.5 bg-blue-600 rounded-full" />
@@ -188,7 +210,9 @@ export const QuizDashboardView = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-4">
-            {allQuizzes?.map((quiz) => (
+            {isAllQuizzesLoading ? (
+               <div className="col-span-full flex justify-center py-10"><Loader2 className="animate-spin text-blue-600" /></div>
+            ) : allQuizzes?.map((quiz) => (
               <PublicQuizCard
                 key={quiz.id}
                 {...quiz}
