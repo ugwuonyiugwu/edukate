@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { trpc } from "@/trpc/client";
-import { Plus, X, Loader2, ImageIcon, FileText, Youtube, Trash2, Edit3, Calendar, Upload, BookOpen, Users } from 'lucide-react';
+import { Plus, X, Loader2, ImageIcon, FileText, Youtube, Trash2, Edit3, Calendar, Upload, BookOpen, Users, ChevronDown } from 'lucide-react';
 import { toast } from "sonner";
 import { useUploadThing } from "@/app/utils/uploadthing";
 import Image from 'next/image';
@@ -25,7 +25,7 @@ interface ClassSession {
 }
 
 export const AdminClassListView = () => {
-  const [mounted, setMounted] = useState(false); // Fix for Hydration Error
+  const [mounted, setMounted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
@@ -39,9 +39,16 @@ export const AdminClassListView = () => {
   const { startUpload: uploadPdf } = useUploadThing("classPdf");
 
   useEffect(() => {
-    setMounted(true);
+    const frame = requestAnimationFrame(() => {
+      setMounted(true);
+    });
+
     const timer = setInterval(() => setTick((prev) => prev + 1), 60000);
-    return () => clearInterval(timer);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      clearInterval(timer);
+    };
   }, []);
   
   const utils = trpc.useUtils();
@@ -139,20 +146,22 @@ export const AdminClassListView = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-black uppercase italic text-slate-900 tracking-tight">Registry Management</h2>
           <p className="text-xs font-bold text-slate-400">Manage student access and curriculum deployments</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-900 transition-all shadow-lg"
+          className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-900 transition-all shadow-lg"
         >
           <Plus size={18} /> New Session
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
+      {/* DESKTOP TABLE VIEW */}
+      <div className="hidden lg:block bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50">
@@ -167,7 +176,6 @@ export const AdminClassListView = () => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {classesList.map((c) => {
-              // Only calculate countdown after mounting to prevent SSR mismatch
               const countdown = mounted ? getCycleCountdown(c.createdAt, c.examDelayDays) : null;
               return (
                 <tr key={c.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -184,10 +192,7 @@ export const AdminClassListView = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    {/* Render a placeholder if not mounted to avoid mismatch */}
-                    {!mounted ? (
-                        <div className="h-1.5 w-28 bg-slate-100 rounded-full animate-pulse" />
-                    ) : countdown ? (
+                    {mounted && countdown ? (
                       <div className="flex flex-col gap-1 w-28">
                         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                           <div className="h-full bg-blue-500 transition-all duration-700" style={{ width: `${countdown.percent}%` }}/>
@@ -220,11 +225,11 @@ export const AdminClassListView = () => {
                         href={`/admin/classes/${c.id}/curriculum`}
                         className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-md"
                     >
-                        <BookOpen size={12}/> Manage Tests
+                       Assessment
                     </Link>
                   </td>
                   <td className="pr-3 py-4 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => openEditModal(c)} className="p-2 text-slate-400 hover:text-blue-600"><Edit3 size={16} /></button>
                       <button onClick={() => confirm("Purge this session?") && deleteMutation.mutate({ id: c.id })} className="p-2 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
@@ -236,12 +241,50 @@ export const AdminClassListView = () => {
         </table>
       </div>
 
+      {/* MOBILE CARD VIEW */}
+      <div className="lg:hidden space-y-4">
+        {classesList.map((c) => (
+          <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex gap-4">
+              <div className="relative w-20 h-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-100 shadow-sm">
+                 {c.thumbnailUrl ? <Image src={c.thumbnailUrl} alt="" fill className="object-cover" /> : <ImageIcon size={20} className="m-auto mt-4 text-slate-300"/>}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-black text-blue-600 uppercase">{c.subject}</span>
+                <span className="font-bold text-slate-900 text-sm truncate">{c.title}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase">ID: {c.id.slice(0,8)}</span>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center py-3 border-y border-slate-50">
+               <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md border ${
+                  c.level === 'Professional' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                  c.level === 'Mastery' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                  'bg-blue-50 text-blue-600 border-blue-100'
+               }`}>Level: {c.level}</span>
+               <div className="flex items-center gap-1 font-black text-slate-900 text-[10px]">
+                 <Users size={12} className="text-slate-400"/> {c._count?.enrollments ?? 0} Students
+               </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Link href={`/admin/classes/${c.id}/curriculum`} className="flex-1 bg-slate-900 text-white py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2">
+                <BookOpen size={14}/> Manage
+              </Link>
+              <button onClick={() => openEditModal(c)} className="p-3 bg-slate-50 text-slate-600 rounded-xl border border-slate-100"><Edit3 size={18}/></button>
+              <button onClick={() => confirm("Purge?") && deleteMutation.mutate({ id: c.id })} className="p-3 bg-red-50 text-red-500 rounded-xl border border-red-100"><Trash2 size={18}/></button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* MODAL SECTION */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-baseline-last justify-center bg-slate-900/60 backdrop-blur-md px-4">
-          <div className="bg-white mt-10 w-full max-w-2xl rounded-sm shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <header className="p-8 border-b flex justify-between items-center bg-slate-50/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md px-4 py-6">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+            <header className="p-6 sm:p-8 border-b flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="bg-blue-600 p-2 rounded-xl text-white">
+                <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-200">
                   {editingId ? <Edit3 size={20} /> : <Plus size={20} />}
                 </div>
                 <h3 className="font-black uppercase tracking-tighter text-slate-900 text-xl">
@@ -251,11 +294,12 @@ export const AdminClassListView = () => {
               <button onClick={closeModal} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"><X size={24}/></button>
             </header>
 
-            <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto">
-              <div className="grid grid-cols-2 gap-8 py-6 px-6 bg-slate-50 rounded-[32px] border border-slate-100">
-                <div className="space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 sm:p-10 space-y-6 sm:space-y-8 overflow-y-auto">
+              {/* FILE UPLOAD GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 sm:p-6 bg-slate-50 rounded-[32px] border border-slate-100">
+                <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase text-blue-600 tracking-widest flex items-center gap-2"><ImageIcon size={14}/>Thumbnail </label>
-                  <div className="relative group aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center cursor-pointer">
+                  <div className="relative group aspect-video rounded-2xl overflow-hidden border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition-all">
                     {thumbFile || existingThumb ? (
                       <>
                         <Image src={thumbFile ? URL.createObjectURL(thumbFile) : existingThumb} alt="" fill className="object-cover" />
@@ -264,24 +308,26 @@ export const AdminClassListView = () => {
                     ) : (
                       <label className="flex flex-col items-center gap-2 cursor-pointer w-full h-full justify-center">
                         <Upload size={20} className="text-slate-400" />
+                        <span className="text-[10px] font-bold text-slate-400">Upload Image</span>
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => setThumbFile(e.target.files?.[0] || null)} />
                       </label>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase text-red-600 tracking-widest flex items-center gap-2"><FileText size={14}/> PDF Resource</label>
-                  <div className={`relative h-24 rounded-2xl border-2 border-dashed flex items-center justify-center transition-all ${pdfFile || existingPdf ? 'bg-white border-green-200 shadow-sm' : 'border-slate-300 bg-white'}`}>
+                  <div className={`relative aspect-video sm:h-auto rounded-2xl border-2 border-dashed flex items-center justify-center transition-all ${pdfFile || existingPdf ? 'bg-white border-green-200 shadow-sm' : 'border-slate-300 bg-white hover:border-red-400'}`}>
                     {pdfFile || existingPdf ? (
-                      <div className="flex items-center gap-3 p-4 w-full">
-                        <div className="bg-red-50 p-2 rounded-lg text-red-500"><FileText size={20}/></div>
-                        <span className="text-[10px] font-black text-slate-600 uppercase truncate max-w-[100px]">{pdfFile ? pdfFile.name : 'Staged PDF'}</span>
-                        <button type="button" onClick={() => {setPdfFile(null); setExistingPdf("");}} className="ml-auto text-red-500"><Trash2 size={14}/></button>
+                      <div className="flex flex-col items-center gap-2 p-4">
+                        <div className="bg-red-50 p-2.5 rounded-lg text-red-500"><FileText size={24}/></div>
+                        <span className="text-[10px] font-black text-slate-600 uppercase truncate max-w-[140px]">{pdfFile ? pdfFile.name : 'Staged PDF'}</span>
+                        <button type="button" onClick={() => {setPdfFile(null); setExistingPdf("");}} className="text-[10px] font-black text-red-500 uppercase">Remove File</button>
                       </div>
                     ) : (
-                      <label className="flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center">
+                      <label className="flex flex-col items-center gap-2 cursor-pointer w-full h-full justify-center">
                         <Upload size={18} className="text-slate-400" />
+                        <span className="text-[10px] font-bold text-slate-400">Upload PDF</span>
                         <input type="file" accept=".pdf" className="hidden" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} />
                       </label>
                     )}
@@ -289,37 +335,60 @@ export const AdminClassListView = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <input name="subject" defaultValue={editingClass?.subject} placeholder="Subject" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
-                <input name="topic" defaultValue={editingClass?.title} placeholder="Topic" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+              {/* INPUT FIELDS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Subject Area</label>
+                  <input name="subject" defaultValue={editingClass?.subject} placeholder="e.g. Mathematics" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Session Topic</label>
+                  <input name="topic" defaultValue={editingClass?.title} placeholder="e.g. Algebra Fundamentals" required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <input name="youtube" defaultValue={editingClass?.youtubeUrl || ""} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none" placeholder="YouTube Stream URL" />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Streaming URL (Optional)</label>
+                <div className="relative">
+                   <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                   <input name="youtube" defaultValue={editingClass?.youtubeUrl || ""} className="w-full p-4 pl-12 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none" placeholder="https://youtube.com/..." />
+                </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                {/* Fixed Select Box with better padding for the arrow */}
-                <select 
-                  name="level" 
-                  defaultValue={editingClass?.level || "Basic"} 
-                  className="w-full p-4 pr-10 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M5%207L10%2012L15%207%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E')] bg-[length:20px_20px] bg-[right_1rem_center] bg-no-repeat"
-                >
-                  <option value="Basic">Basic</option>
-                  <option value="Mastery">Mastery</option>
-                  <option value="Professional">Professional</option>
-                </select>
-                <input name="examDelayDays" type="number" defaultValue={editingClass?.examDelayDays || 0} required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none" placeholder="Days" />
-                <input name="points" type="number" defaultValue={editingClass?.pointsRequired} placeholder="Points" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none" />
+              {/* SELECT AND NUMBERS GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Level</label>
+                  <div className="relative">
+                    <select 
+                      name="level" 
+                      defaultValue={editingClass?.level || "Basic"} 
+                      className="w-full p-4 pr-10 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none appearance-none cursor-pointer focus:border-blue-500"
+                    >
+                      <option value="Basic">Basic</option>
+                      <option value="Mastery">Mastery</option>
+                      <option value="Professional">Professional</option>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Exam Delay (Days)</label>
+                  <input name="examDelayDays" type="number" defaultValue={editingClass?.examDelayDays || 0} required className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Points Required</label>
+                  <input name="points" type="number" defaultValue={editingClass?.pointsRequired} placeholder="0" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none" />
+                </div>
               </div>
 
               <button 
                 type="submit" 
                 disabled={isUploading || createMutation.isPending || updateMutation.isPending}
-                className="w-full bg-slate-900 text-white h-16 rounded-2xl font-black uppercase tracking-[0.3em] hover:bg-blue-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                className="w-full bg-slate-900 text-white h-16 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-blue-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-slate-200"
               >
                 {(isUploading || createMutation.isPending || updateMutation.isPending) ? (
-                  <><Loader2 className="animate-spin"/> {isUploading ? "Uploading Storage..." : "Processing..."}</>
+                  <><Loader2 className="animate-spin"/> {isUploading ? "Uploading..." : "Syncing..."}</>
                 ) : (editingId ? "Save Changes" : "Deploy Session")}
               </button>
             </form>
