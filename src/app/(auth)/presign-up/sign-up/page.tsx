@@ -11,6 +11,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 interface ClerkError {
   errors: Array<{
     message: string;
