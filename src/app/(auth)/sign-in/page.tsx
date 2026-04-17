@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useSignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,9 +44,12 @@ const SignInPage = () => {
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
+        
+        // Success Toast
         toast.success("Welcome back!", {
-          description: "Login successful.",
+          description: "Signed in to EDUKATE2026 successfully.",
         });
+        
         router.push("/dashboard");
       } else {
         console.log("Secondary step required:", result);
@@ -64,41 +67,50 @@ const SignInPage = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50/40 px-4">
       
-      {/* Reduced max-width and added premium shadow */}
-      <Card className="w-full max-w-100 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[2rem] bg-white overflow-hidden">
-        <CardContent className="p-8">
+      {/* Width updated to match Sign-Up for consistency */}
+      <Card className="w-full max-w-120 border border-blue-200 shadow-[0_20px_50px_rgba(8,112,184,0.08)] rounded-lg bg-white overflow-hidden transition-all duration-300">
+        <CardContent className="p-8 md:p-12">
           
-          {/* Tabs UI - Slightly smaller text for better proportion */}
-          <div className="flex justify-center gap-12 mb-8 border-b border-slate-50">
-            <button type="button" className="pb-3 text-2xl font-bold text-blue-600 border-b-4 border-blue-600">
+          {/* Tabs UI */}
+          <div className="flex justify-center gap-12 mb-10 border-b border-slate-100">
+            <button type="button" className="pb-4 text-2xl font-bold text-blue-600 border-b-4 border-blue-600">
               Log in
             </button>
-            <Link href="/sign-up">
-              <button type="button" className="pb-3 text-2xl font-bold text-slate-300 hover:text-slate-400 transition-all">
+            <Link href="/presign-up/sign-up">
+              <button type="button" className="pb-4 text-2xl font-bold text-slate-300 hover:text-slate-400 transition-all">
                 Sign Up
               </button>
             </Link>
           </div>
 
-          <form onSubmit={handleSignIn} className="space-y-4">
+          <form onSubmit={handleSignIn} className="space-y-6">
             {/* Email Input */}
-            <div className="space-y-1.5">
-              <Label className="text-slate-500 font-medium text-xs ml-1 uppercase tracking-wider">Your Email</Label>
-              <Input 
-                className="bg-slate-50/50 border-slate-200 h-12 rounded-xl focus-visible:ring-2 focus-visible:ring-blue-500/20 transition-all"
-                type="email" 
-                placeholder="name@example.com"
-                required 
-                onChange={(e) => setEmail(e.target.value)} 
-              />
+            <div className="space-y-2">
+              <Label className="text-slate-500 font-medium text-sm ml-1 uppercase tracking-wider">Your Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-300" />
+                <Input 
+                  className="bg-slate-50/50 border-slate-200 h-12 rounded-xl pl-12 focus-visible:ring-2 focus-visible:ring-blue-500/10 transition-all"
+                  type="email" 
+                  placeholder="name@example.com"
+                  required 
+                  onChange={(e) => setEmail(e.target.value)} 
+                />
+              </div>
             </div>
 
             {/* Password Input */}
-            <div className="space-y-1.5">
-              <Label className="text-slate-500 font-medium text-xs ml-1 uppercase tracking-wider">Password</Label>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-1">
+                <Label className="text-slate-500 font-medium text-sm uppercase tracking-wider">Password</Label>
+                <Link href="/forgot-password" className="text-slate-400 italic text-xs hover:text-blue-500 transition-colors">
+                  forgot password?
+                </Link>
+              </div>
               <div className="relative">
+                <Lock className="absolute left-4 top-3.5 h-5 w-5 text-slate-300" />
                 <Input 
-                  className="bg-slate-50/50 border-slate-200 h-12 rounded-xl pr-12 focus-visible:ring-2 focus-visible:ring-blue-500/20 transition-all"
+                  className="bg-slate-50/50 border-slate-200 h-12 rounded-xl pl-12 pr-12 focus-visible:ring-2 focus-visible:ring-blue-500/10 transition-all"
                   type={showPw ? "text" : "password"} 
                   placeholder="••••••••"
                   required 
@@ -107,27 +119,23 @@ const SignInPage = () => {
                 <button 
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-4 top-3 text-slate-400 hover:text-slate-600"
+                  className="absolute right-4 top-3 text-slate-400 hover:text-blue-600 transition-colors"
                 >
                   {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <div className="text-right px-1">
-                  <Link href="/forgot-password" className="text-slate-400 italic text-xs hover:text-blue-500 transition-colors">
-                    forgot password?
-                  </Link>
-              </div>
             </div>
 
+            {/* Submit Button */}
             <Button 
               disabled={isLoading}
               type="submit" 
-              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-100 mt-2 active:scale-95 transition-all"
+              className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-100 mt-4 active:scale-95 transition-all"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Verifying...</span>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Signing in...</span>
                 </div>
               ) : (
                 "Log in"
@@ -136,7 +144,7 @@ const SignInPage = () => {
 
             <div className="pt-6 text-center">
                <p className="text-slate-400 text-sm">
-                Need an account? <Link href="/sign-up" className="font-bold text-slate-600 hover:text-blue-600 hover:underline">Sign Up</Link>
+                Need an account? <Link href="/presign-up " className="font-bold text-slate-600 hover:text-blue-600 hover:underline transition-all">Create Account</Link>
                </p>
             </div>
           </form>

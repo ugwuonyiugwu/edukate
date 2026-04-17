@@ -86,7 +86,7 @@ export const EliminationArena = ({
         {wasEliminated && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
+            className="fixed inset-0 z-60 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
           >
             <Skull className="w-24 h-24 text-rose-600 mb-6 animate-pulse" />
             <h2 className="text-6xl font-black text-white uppercase italic tracking-tighter mb-2">Eliminated</h2>
@@ -100,7 +100,7 @@ export const EliminationArena = ({
         {isWinner && (
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="fixed inset-0 z-[60] bg-indigo-600/20 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
+            className="fixed inset-0 z-60 bg-indigo-600/20 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
           >
             <Trophy className="w-32 h-32 text-yellow-500 mb-6 animate-bounce" />
             <h2 className="text-7xl font-black text-white uppercase italic tracking-tighter">Champion</h2>

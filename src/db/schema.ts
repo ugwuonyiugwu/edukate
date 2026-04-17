@@ -1,5 +1,5 @@
 // @/db/schema.ts
-import { pgTable, text, timestamp, uuid, integer, uniqueIndex, date, serial, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, uniqueIndex, varchar, date, serial, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   courseProgress: integer("course_progress").default(0).notNull(),
   currentStreak: integer("current_streak").default(0).notNull(),
   longestStreak: integer("longest_streak").default(0).notNull(),
+  role: text("role").default("user").notNull(),
   points: integer("points").default(200).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -134,6 +135,50 @@ export const submissionRelations = relations(submissions, ({ one }) => ({
   }),
   user: one(users, {
     fields: [submissions.clerkId],
+    references: [users.clerkId],
+  }),
+}));
+
+// --- CLASSES (Updated with Level, Subject, and Date) ---
+export const classes = pgTable("classes", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: varchar("title", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 100 }).notNull(),
+  level: varchar("level", { length: 50 }).notNull().default("Basic"),
+  examDelayDays: integer("exam_delay_days").default(0).notNull(),  
+  pointsRequired: integer("points_required").default(0).notNull(),
+  description: text("description"),
+  thumbnailUrl: text("thumbnail_url"),
+  pdfUrl: text("pdf_url"),
+  youtubeUrl: text("youtube_url"),
+  clerkId: text("clerk_id").notNull(), 
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// --- CLASS ENROLLMENTS ---
+export const classEnrollments = pgTable("class_enrollments", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  classId: text("class_id").notNull().references(() => classes.id, { onDelete: "cascade" }),
+  clerkId: text("clerk_id").notNull().references(() => users.clerkId),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// --- RELATIONSHIPS (Updated) ---
+export const classesRelations = relations(classes, ({ one, many }) => ({
+  teacher: one(users, {
+    fields: [classes.clerkId],
+    references: [users.clerkId],
+  }),
+  enrollments: many(classEnrollments),
+}));
+
+export const enrollmentsRelations = relations(classEnrollments, ({ one }) => ({
+  class: one(classes, {
+    fields: [classEnrollments.classId],
+    references: [classes.id],
+  }),
+  student: one(users, {
+    fields: [classEnrollments.clerkId],
     references: [users.clerkId],
   }),
 }));

@@ -91,7 +91,7 @@ export const DashboardView = () => {
       {/* Header Section */}
       <div className="flex justify-between items-start mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome {user?.username || user?.firstName || 'User'},</h1>
+          <h1 className="text-3xl font-bold text-gray-900" suppressHydrationWarning> Welcome {user?.username || user?.firstName || 'User'}, </h1>
           <p className="text-gray-500 text-sm mt-1">The only way to do great work is to love what you do!</p>
         </div>
         <div className="bg-blue-50 p-2 rounded-2xl border border-blue-100 shadow-sm mb-5 text-right shrink-0">

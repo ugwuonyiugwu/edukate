@@ -39,7 +39,7 @@ const navItems = [
   { title: "Quizathon", icon: Trophy, url: "/quizathon" },
   { title: "Scholarship", icon: GraduationCap, url: "/dashboard/scholarship" },
   { title: "Notification", icon: Bell, url: "/dashboard/notifications" },
-  { title: "Class", icon: School, url: "/dashboard/class" },
+  { title: "Class", icon: School, url: "/classes" },
 ]
 
 export const HomeSidebar = ({ setActiveTitle, activeTitle }: HomeSidebarProps) => {

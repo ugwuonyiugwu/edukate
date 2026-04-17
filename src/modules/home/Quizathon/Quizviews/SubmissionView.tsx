@@ -133,7 +133,7 @@ export const SubmissionView = ({ quizId }: { quizId: string }) => {
                 name="question"
                 required
                 placeholder="Write your question here..."
-                className="w-full bg-white/5 border-none text-white text-3xl font-light p-5 focus-visible:ring-0 placeholder:text-white/10 resize-none min-h-[150px]"
+                className="w-full bg-white/5 border-none text-white text-3xl font-light p-5 focus-visible:ring-0 placeholder:text-white/10 resize-none min-h-37.5"
               />
             </div>
 

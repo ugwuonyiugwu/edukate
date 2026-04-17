@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSignUp } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, User, Mail, Lock, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,10 @@ interface ClerkError {
 const SignUpPage = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Captures the role from the URL (defaults to student if none found)
+  const role = searchParams.get("role") || "student";
 
   // Form States
   const [username, setUsername] = React.useState("");
@@ -53,16 +57,17 @@ const SignUpPage = () => {
 
     setIsLoading(true);
     try {
-      // Included username in the creation call
       const result = await signUp.create({ 
         username,
         emailAddress: email, 
-        password 
+        password,
+        // SAVES CATEGORY HERE
+        unsafeMetadata: { role: role } 
       });
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        toast.success("Account created!", { description: "Welcome to EDUKATE2026." });
+        toast.success("Account created!", { description: `Welcome as a ${role}!` });
         router.push("/dashboard");
       }
     } catch (err) {
@@ -77,10 +82,10 @@ const SignUpPage = () => {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-slate-50/50 px-4">
-      <Card className="w-full max-w-[440px] border border-slate-200 shadow-[0_20px_50px_rgba(8,112,184,0.08)] rounded-[2.5rem] bg-white overflow-hidden">
-        <CardContent className="p-10">
+      <Card className="w-full max-w-110 border border-blue-200 shadow-[0_20px_50px_rgba(8,112,184,0.08)] rounded-lg bg-white overflow-hidden">
+        <CardContent className="p-3 px-8">
           
-          <div className="flex justify-center gap-12 mb-10 border-b border-slate-100">
+          <div className="flex justify-center gap-12 mb-6 border-b border-slate-100">
             <Link href="/sign-in" className="pb-4 text-2xl font-bold text-slate-300 hover:text-slate-400 transition-all">
               Log in
             </Link>
@@ -89,8 +94,12 @@ const SignUpPage = () => {
             </button>
           </div>
 
+          {/* Simple Label to confirm choice from previous page */}
+          <p className="text-center text-slate-400 text-xs uppercase tracking-widest mb-6 font-semibold">
+            Creating <span className="text-blue-600">{role}</span> account
+          </p>
+
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Username Input */}
             <div className="space-y-2">
               <Label className="text-slate-500 font-medium text-sm ml-1">Username</Label>
               <div className="relative">
@@ -105,7 +114,6 @@ const SignUpPage = () => {
               </div>
             </div>
 
-            {/* Email Input */}
             <div className="space-y-2">
               <Label className="text-slate-500 font-medium text-sm ml-1">Your Email</Label>
               <div className="relative">
@@ -120,7 +128,6 @@ const SignUpPage = () => {
               </div>
             </div>
 
-            {/* Password Input */}
             <div className="space-y-2">
               <Label className="text-slate-500 font-medium text-sm ml-1">Password</Label>
               <div className="relative">
@@ -137,7 +144,6 @@ const SignUpPage = () => {
                 </button>
               </div>
 
-              {/* Real-time Validation UI */}
               <div className="grid grid-cols-2 gap-2 mt-3 px-1">
                 <ValidationCheck label="6+ Chars" met={validations.length} />
                 <ValidationCheck label="Letters" met={validations.letter} />
@@ -154,11 +160,7 @@ const SignUpPage = () => {
                 : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
               }`}
             >
-              {isLoading ? (
-                <Loader2 className="animate-spin h-5 w-5" />
-              ) : (
-                "Create Account"
-              )}
+              {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : "Create Account"}
             </Button>
           </form>
         </CardContent>
@@ -167,7 +169,6 @@ const SignUpPage = () => {
   );
 }
 
-// Helper component for validation checks
 const ValidationCheck = ({ label, met }: { label: string; met: boolean }) => (
   <div className={`flex items-center gap-2 text-[11px] font-medium transition-colors ${met ? "text-green-600" : "text-slate-400"}`}>
     {met ? <CheckCircle2 size={12} /> : <Circle size={12} className="opacity-50" />}
