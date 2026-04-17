@@ -11,7 +11,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import Link from "next/link";
 
-// Proper TypeScript interface for Clerk errors
+export const dynamic = "force-dynamic";
+
 interface ClerkError {
   errors: Array<{
     message: string;
