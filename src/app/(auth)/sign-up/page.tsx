@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useSignUp } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, User, Mail, Lock, CheckCircle2, Circle } from "lucide-react";
@@ -11,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import Link from "next/link";
 
+// 1. Force dynamic behavior for the route
 export const dynamic = "force-dynamic";
 
 interface ClerkError {
@@ -20,24 +22,35 @@ interface ClerkError {
   }>;
 }
 
+// 2. This is the main page component that satisfies the Next.js build requirement
 const SignUpPage = () => {
+  return (
+    <Suspense 
+      fallback={
+        <div className="flex justify-center items-center min-h-screen bg-slate-50/50">
+          <Loader2 className="animate-spin h-10 w-10 text-blue-600" />
+        </div>
+      }
+    >
+      <SignUpFormContent />
+    </Suspense>
+  );
+};
+
+// 3. Move the actual form logic into a sub-component
+const SignUpFormContent = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Captures the role from the URL (defaults to student if none found)
   const role = searchParams.get("role") || "student";
 
-  // Form States
   const [username, setUsername] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  
-  // UI States
   const [showPw, setShowPw] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Password Validation Logic
   const validations = {
     length: password.length >= 6,
     number: /[0-9]/.test(password),
@@ -63,7 +76,6 @@ const SignUpPage = () => {
         username,
         emailAddress: email, 
         password,
-        // SAVES CATEGORY HERE
         unsafeMetadata: { role: role } 
       });
 
@@ -84,9 +96,8 @@ const SignUpPage = () => {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-slate-50/50 px-4">
-      <Card className="w-full max-w-110 border border-blue-200 shadow-[0_20px_50px_rgba(8,112,184,0.08)] rounded-lg bg-white overflow-hidden">
+      <Card className="w-full max-w-[440px] border border-blue-200 shadow-[0_20px_50px_rgba(8,112,184,0.08)] rounded-lg bg-white overflow-hidden">
         <CardContent className="p-3 px-8">
-          
           <div className="flex justify-center gap-12 mb-6 border-b border-slate-100">
             <Link href="/sign-in" className="pb-4 text-2xl font-bold text-slate-300 hover:text-slate-400 transition-all">
               Log in
@@ -96,7 +107,6 @@ const SignUpPage = () => {
             </button>
           </div>
 
-          {/* Simple Label to confirm choice from previous page */}
           <p className="text-center text-slate-400 text-xs uppercase tracking-widest mb-6 font-semibold">
             Creating <span className="text-blue-600">{role}</span> account
           </p>
@@ -169,7 +179,7 @@ const SignUpPage = () => {
       </Card>
     </div>
   );
-}
+};
 
 const ValidationCheck = ({ label, met }: { label: string; met: boolean }) => (
   <div className={`flex items-center gap-2 text-[11px] font-medium transition-colors ${met ? "text-green-600" : "text-slate-400"}`}>
