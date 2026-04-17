@@ -1,6 +1,7 @@
 'use client';
 
 import { trpc } from "@/trpc/client";
+import { format } from "date-fns";
 import { Calendar, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,7 +37,7 @@ export function AcademyDirectoryView({ selectedLevel }: { selectedLevel: string 
             <h3 className="text-xl font-bold mb-4">{c.title}</h3>
             <div className="flex items-center gap-2 text-slate-400 text-xs mb-6">
               <Calendar size={14} />
-              <span>{c.classDate}</span>
+             <span>{c.createdAt ? format(new Date(c.createdAt), "PPP") : "No Date"}</span>
             </div>
             <button 
               onClick={() => joinMutation.mutate({ classId: c.id })}
