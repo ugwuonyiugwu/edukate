@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { trpc } from "@/trpc/client";
-import { Plus, X, Loader2, ImageIcon, FileText, Youtube, Trash2, Edit3, Calendar, Upload, BookOpen, Users, ChevronDown } from 'lucide-react';
+import { Plus, X, Loader2, ImageIcon, FileText, Youtube, Trash2, Edit3, Upload, BookOpen, Users, ChevronDown } from 'lucide-react';
 import { toast } from "sonner";
 import { useUploadThing } from "@/app/utils/uploadthing";
 import Image from 'next/image';
-import { format } from "date-fns";
 import Link from 'next/link';
 
 type AcademicLevel = "Basic" | "Mastery" | "Professional";
@@ -33,7 +32,7 @@ export const AdminClassListView = () => {
   const [existingThumb, setExistingThumb] = useState("");
   const [existingPdf, setExistingPdf] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
 
   const { startUpload: uploadThumb } = useUploadThing("classImage");
   const { startUpload: uploadPdf } = useUploadThing("classPdf");
@@ -59,12 +58,12 @@ export const AdminClassListView = () => {
 
   const createMutation = trpc.classes.create.useMutation({
     onSuccess: () => { utils.classes.getAll.invalidate(); toast.success("Registry Live!"); closeModal(); },
-    onError: (err) => { toast.error(err.message); setIsUploading(false); }
+    onError: (error) => { toast.error(error.message); setIsUploading(false); }
   });
 
   const updateMutation = trpc.classes.update.useMutation({
     onSuccess: () => { utils.classes.getAll.invalidate(); toast.success("Session Updated!"); closeModal(); },
-    onError: (err) => { toast.error(err.message); setIsUploading(false); }
+    onError: (error) => { toast.error(error.message); setIsUploading(false); }
   });
 
   const deleteMutation = trpc.classes.delete.useMutation({
@@ -123,7 +122,7 @@ export const AdminClassListView = () => {
       } else {
         createMutation.mutate(data);
       }
-    } catch (err) {
+    } catch {
       toast.error("Deployment Failed");
       setIsUploading(false);
     }
@@ -146,7 +145,6 @@ export const AdminClassListView = () => {
 
   return (
     <div className="space-y-6">
-      {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-black uppercase italic text-slate-900 tracking-tight">Registry Management</h2>
@@ -160,7 +158,6 @@ export const AdminClassListView = () => {
         </button>
       </div>
 
-      {/* DESKTOP TABLE VIEW */}
       <div className="hidden lg:block bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -187,7 +184,7 @@ export const AdminClassListView = () => {
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">{c.subject}</span>
-                      <span className="font-bold text-slate-900 text-sm truncate max-w-[150px]">{c.title}</span>
+                      <span className="font-bold text-slate-900 text-sm truncate max-w-37.5">{c.title}</span>
                       <span className="text-[10px] font-bold text-slate-400 uppercase italic">ID: {c.id.slice(0,8)}</span>
                     </div>
                   </td>
@@ -225,7 +222,7 @@ export const AdminClassListView = () => {
                         href={`/admin/classes/${c.id}/curriculum`}
                         className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-md"
                     >
-                       Assessment
+                        Assessment
                     </Link>
                   </td>
                   <td className="pr-3 py-4 text-right">
@@ -241,44 +238,61 @@ export const AdminClassListView = () => {
         </table>
       </div>
 
-      {/* MOBILE CARD VIEW */}
       <div className="lg:hidden space-y-4">
-        {classesList.map((c) => (
-          <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex gap-4">
-              <div className="relative w-20 h-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-100 shadow-sm">
-                 {c.thumbnailUrl ? <Image src={c.thumbnailUrl} alt="" fill className="object-cover" /> : <ImageIcon size={20} className="m-auto mt-4 text-slate-300"/>}
+        {classesList.map((c) => {
+          const countdown = mounted ? getCycleCountdown(c.createdAt, c.examDelayDays) : null;
+          return (
+            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex gap-4">
+                <div className="relative w-20 h-14 shrink-0 overflow-hidden rounded-lg border border-slate-100 shadow-sm">
+                   {c.thumbnailUrl ? <Image src={c.thumbnailUrl} alt="" fill className="object-cover" /> : <ImageIcon size={20} className="m-auto mt-4 text-slate-300"/>}
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-[10px] font-black text-blue-600 uppercase">{c.subject}</span>
+                  <span className="font-bold text-slate-900 text-sm truncate">{c.title}</span>
+                  <div className="mt-1">
+                    {mounted && countdown ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-1 w-16 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500 transition-all duration-700" style={{ width: `${countdown.percent}%` }}/>
+                        </div>
+                        <span className="text-[9px] font-black text-slate-500 tabular-nums uppercase tracking-tight">
+                          Reset: {countdown.d}d {countdown.h}h {countdown.m}m
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1">
+                        <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
+                        Access Open
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-black text-blue-600 uppercase">{c.subject}</span>
-                <span className="font-bold text-slate-900 text-sm truncate">{c.title}</span>
-                <span className="text-[10px] font-black text-slate-400 uppercase">ID: {c.id.slice(0,8)}</span>
+              
+              <div className="flex justify-between items-center py-3 border-y border-slate-50">
+                 <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md border ${
+                    c.level === 'Professional' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                    c.level === 'Mastery' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                    'bg-blue-50 text-blue-600 border-blue-100'
+                 }`}>Level: {c.level}</span>
+                 <div className="flex items-center gap-1 font-black text-slate-900 text-[10px]">
+                   <Users size={12} className="text-slate-400"/> {c._count?.enrollments ?? 0} Students
+                 </div>
               </div>
-            </div>
-            
-            <div className="flex justify-between items-center py-3 border-y border-slate-50">
-               <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md border ${
-                  c.level === 'Professional' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                  c.level === 'Mastery' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                  'bg-blue-50 text-blue-600 border-blue-100'
-               }`}>Level: {c.level}</span>
-               <div className="flex items-center gap-1 font-black text-slate-900 text-[10px]">
-                 <Users size={12} className="text-slate-400"/> {c._count?.enrollments ?? 0} Students
-               </div>
-            </div>
 
-            <div className="flex gap-2">
-              <Link href={`/admin/classes/${c.id}/curriculum`} className="flex-1 bg-slate-900 text-white py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2">
-                <BookOpen size={14}/> Manage
-              </Link>
-              <button onClick={() => openEditModal(c)} className="p-3 bg-slate-50 text-slate-600 rounded-xl border border-slate-100"><Edit3 size={18}/></button>
-              <button onClick={() => confirm("Purge?") && deleteMutation.mutate({ id: c.id })} className="p-3 bg-red-50 text-red-500 rounded-xl border border-red-100"><Trash2 size={18}/></button>
+              <div className="flex gap-2">
+                <Link href={`/admin/classes/${c.id}/curriculum`} className="flex-1 bg-slate-900 text-white py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2">
+                  <BookOpen size={14}/> Manage
+                </Link>
+                <button onClick={() => openEditModal(c)} className="p-3 bg-slate-50 text-slate-600 rounded-xl border border-slate-100"><Edit3 size={18}/></button>
+                <button onClick={() => confirm("Purge?") && deleteMutation.mutate({ id: c.id })} className="p-3 bg-red-50 text-red-500 rounded-xl border border-red-100"><Trash2 size={18}/></button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* MODAL SECTION */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md px-4 py-6">
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
@@ -295,7 +309,6 @@ export const AdminClassListView = () => {
             </header>
 
             <form onSubmit={handleSubmit} className="p-6 sm:p-10 space-y-6 sm:space-y-8 overflow-y-auto">
-              {/* FILE UPLOAD GRID */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 sm:p-6 bg-slate-50 rounded-[32px] border border-slate-100">
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase text-blue-600 tracking-widest flex items-center gap-2"><ImageIcon size={14}/>Thumbnail </label>
@@ -321,7 +334,7 @@ export const AdminClassListView = () => {
                     {pdfFile || existingPdf ? (
                       <div className="flex flex-col items-center gap-2 p-4">
                         <div className="bg-red-50 p-2.5 rounded-lg text-red-500"><FileText size={24}/></div>
-                        <span className="text-[10px] font-black text-slate-600 uppercase truncate max-w-[140px]">{pdfFile ? pdfFile.name : 'Staged PDF'}</span>
+                        <span className="text-[10px] font-black text-slate-600 uppercase truncate max-w-35">{pdfFile ? pdfFile.name : 'Staged PDF'}</span>
                         <button type="button" onClick={() => {setPdfFile(null); setExistingPdf("");}} className="text-[10px] font-black text-red-500 uppercase">Remove File</button>
                       </div>
                     ) : (
@@ -335,7 +348,6 @@ export const AdminClassListView = () => {
                 </div>
               </div>
 
-              {/* INPUT FIELDS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Subject Area</label>
@@ -355,7 +367,6 @@ export const AdminClassListView = () => {
                 </div>
               </div>
 
-              {/* SELECT AND NUMBERS GRID */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Level</label>
