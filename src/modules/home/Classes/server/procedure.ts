@@ -13,6 +13,15 @@ const getFileKey = (url: string | null | undefined) => {
 };
 
 export const classRouter = createTRPCRouter({
+  /**
+   * Provides a synchronized server timestamp.
+   * Used to ensure timers are uniform across all user devices.
+   */
+  getServerTime: baseProcedure
+    .query(() => {
+      return { serverTime: Date.now() };
+    }),
+
   getById: baseProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -64,7 +73,7 @@ export const classRouter = createTRPCRouter({
       const customId = Math.random().toString(36).substring(2, 10).toUpperCase();
 
       const [newClass] = await ctx.db.insert(classes).values({
-        id: customId, // MANUALLY PROVIDING THE ID FIXES THE "DEFAULT" ERROR
+        id: customId,
         title: input.title,
         subject: input.subject,
         level: input.level,
@@ -127,7 +136,6 @@ export const classRouter = createTRPCRouter({
 
       if (!classRecord) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // --- 1. COLLECT ALL FILE KEYS FOR DELETION ---
       const filesToDelete: string[] = [];
 
       const thumbKey = getFileKey(classRecord.thumbnailUrl);
@@ -145,7 +153,6 @@ export const classRouter = createTRPCRouter({
         if (key) filesToDelete.push(key);
       });
 
-      // --- 2. EXECUTE UPLOADTHING DELETION ---
       if (filesToDelete.length > 0) {
         try {
           await utapi.deleteFiles(filesToDelete);

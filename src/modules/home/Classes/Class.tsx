@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { BookOpen, Zap, Crown, ArrowRight, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-// Move configuration outside the component to prevent re-renders
 const LEVELS = [
   {
     id: 'Basic',
