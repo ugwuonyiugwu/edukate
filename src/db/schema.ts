@@ -1,10 +1,13 @@
-// @/db/schema.ts
-import { pgTable, text, timestamp, uuid, integer, uniqueIndex, varchar, date, serial, boolean } from "drizzle-orm/pg-core";
+import { 
+  pgTable, text, timestamp, uuid, integer, 
+  uniqueIndex, varchar, date, serial, jsonb, boolean 
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
+// --- USERS ---
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  clerkId: text("clerk_id").unique().notNull(),
+  clerkId: text("clerk_id").unique().notNull(), 
   email: text("email").notNull(),
   username: text("username"),
   imageUrl: text("image_url"),
@@ -28,7 +31,7 @@ export const users = pgTable("users", {
 // --- LIBRARIES & DOCUMENTS ---
 export const libraries = pgTable("libraries", {
   id: serial("id").primaryKey(),
-  clerkId: text("clerk_id").notNull().unique(),
+  clerkId: text("clerk_id").notNull().unique().references(() => users.clerkId),
   name: text("name").notNull(),
   thumbnailUrl: text("thumbnail_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -37,7 +40,7 @@ export const libraries = pgTable("libraries", {
 
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
-  clerkId: text("clerk_id").notNull(),
+  clerkId: text("clerk_id").notNull().references(() => users.clerkId),
   name: text("name").notNull(),
   subject: text("subject").notNull(),
   description: text("description").notNull(),
@@ -53,7 +56,7 @@ export const documents = pgTable("documents", {
 // --- QUIZZES ---
 export const quizzes = pgTable("quizzes", {
   id: uuid("id").primaryKey().defaultRandom(),
-  clerkId: text("clerk_id").notNull(),
+  clerkId: text("clerk_id").notNull().references(() => users.clerkId),
   title: text("title").notNull(),
   category: text("category").notNull(),
   date: text("date").notNull(), 
@@ -66,25 +69,20 @@ export const quizzes = pgTable("quizzes", {
 });
 
 // --- PARTICIPANTS ---
-
 export const participants = pgTable("participants", {
   id: uuid("id").primaryKey().defaultRandom(),
   quizId: uuid("quiz_id").references(() => quizzes.id, { onDelete: "cascade" }).notNull(),
-  clerkId: text("clerk_id").notNull(), 
-  score: integer("score").default(0).notNull(), // ADDED
-  isEliminated: boolean("is_eliminated").default(false).notNull(), // ADDED
+  clerkId: text("clerk_id").notNull().references(() => users.clerkId), 
+  score: integer("score").default(0).notNull(),
+  isEliminated: boolean("is_eliminated").default(false).notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
 
-// --- SUBMISSIONS (Updated for 20 questions & Type Safety) ---
+// --- SUBMISSIONS ---
 export const submissions = pgTable("submissions", {
-  id: uuid("id").primaryKey().defaultRandom(), // Updated to uuid
-  quizId: uuid("quiz_id") // Changed to uuid to match quizzes.id
-    .notNull()
-    .references(() => quizzes.id, { onDelete: 'cascade' }),
-  clerkId: text("clerk_id") // Changed to snake_case for consistency
-    .notNull()
-    .references(() => users.clerkId),
+  id: uuid("id").primaryKey().defaultRandom(),
+  quizId: uuid("quiz_id").notNull().references(() => quizzes.id, { onDelete: 'cascade' }),
+  clerkId: text("clerk_id").notNull().references(() => users.clerkId),
   questionText: text("question_text").notNull(),
   imageUrl: text("image_url"),
   correctAnswer: text("correct_answer").notNull(),
@@ -94,54 +92,9 @@ export const submissions = pgTable("submissions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// --- RELATIONSHIPS ---
-
-export const userRelations = relations(users, ({ many }) => ({
-  registrations: many(participants),
-  submissions: many(submissions), // Added relationship
-}));
-
-export const libraryRelations = relations(libraries, ({ many }) => ({
-  documents: many(documents),
-}));
-
-export const documentRelations = relations(documents, ({ one }) => ({
-  library: one(libraries, {
-    fields: [documents.libraryId],
-    references: [libraries.id],
-  }),
-}));
-
-export const quizRelations = relations(quizzes, ({ many }) => ({
-  participants: many(participants),
-  submissions: many(submissions), // Added relationship
-}));
-
-export const participantRelations = relations(participants, ({ one }) => ({
-  quiz: one(quizzes, {
-    fields: [participants.quizId],
-    references: [quizzes.id],
-  }),
-  user: one(users, {
-    fields: [participants.clerkId],
-    references: [users.clerkId],
-  }),
-}));
-
-export const submissionRelations = relations(submissions, ({ one }) => ({
-  quiz: one(quizzes, {
-    fields: [submissions.quizId],
-    references: [quizzes.id],
-  }),
-  user: one(users, {
-    fields: [submissions.clerkId],
-    references: [users.clerkId],
-  }),
-}));
-
-// --- CLASSES (Updated with Level, Subject, and Date) ---
+// --- CLASSES ---
 export const classes = pgTable("classes", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text("id").primaryKey(), 
   title: varchar("title", { length: 255 }).notNull(),
   subject: varchar("subject", { length: 100 }).notNull(),
   level: varchar("level", { length: 50 }).notNull().default("Basic"),
@@ -151,34 +104,77 @@ export const classes = pgTable("classes", {
   thumbnailUrl: text("thumbnail_url"),
   pdfUrl: text("pdf_url"),
   youtubeUrl: text("youtube_url"),
-  clerkId: text("clerk_id").notNull(), 
+  clerkId: text("clerk_id").notNull().references(() => users.clerkId), 
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // --- CLASS ENROLLMENTS ---
 export const classEnrollments = pgTable("class_enrollments", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: uuid("id").primaryKey().defaultRandom(),
+  // MATCHED: Changed classId type to text to match parent table
   classId: text("class_id").notNull().references(() => classes.id, { onDelete: "cascade" }),
   clerkId: text("clerk_id").notNull().references(() => users.clerkId),
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
-// --- RELATIONSHIPS (Updated) ---
-export const classesRelations = relations(classes, ({ one, many }) => ({
-  teacher: one(users, {
-    fields: [classes.clerkId],
-    references: [users.clerkId],
-  }),
+// --- QUESTIONS ---
+export const questions = pgTable("questions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: text("class_id").references(() => classes.id).notNull(), 
+  type: text("type").notNull(), 
+  text: text("text").notNull(),
+  imageUrl: text("image_url"),
+  options: text("options").array().notNull(),
+  correctAnswer: integer("correct_answer").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+// --- RELATIONS --- (No changes needed here as Drizzle uses the table objects)
+
+export const userRelations = relations(users, ({ many }) => ({
+  registrations: many(participants),
+  submissions: many(submissions),
   enrollments: many(classEnrollments),
+  classes: many(classes),
+  libraries: many(libraries),
+}));
+
+export const libraryRelations = relations(libraries, ({ one, many }) => ({
+  user: one(users, { fields: [libraries.clerkId], references: [users.clerkId] }),
+  documents: many(documents),
+}));
+
+export const documentRelations = relations(documents, ({ one }) => ({
+  library: one(libraries, { fields: [documents.libraryId], references: [libraries.id] }),
+  user: one(users, { fields: [documents.clerkId], references: [users.clerkId] }),
+}));
+
+export const quizRelations = relations(quizzes, ({ one, many }) => ({
+  creator: one(users, { fields: [quizzes.clerkId], references: [users.clerkId] }),
+  participants: many(participants),
+  submissions: many(submissions),
+}));
+
+export const participantRelations = relations(participants, ({ one }) => ({
+  quiz: one(quizzes, { fields: [participants.quizId], references: [quizzes.id] }),
+  user: one(users, { fields: [participants.clerkId], references: [users.clerkId] }),
+}));
+
+export const submissionRelations = relations(submissions, ({ one }) => ({
+  quiz: one(quizzes, { fields: [submissions.quizId], references: [quizzes.id] }),
+  user: one(users, { fields: [submissions.clerkId], references: [users.clerkId] }),
+}));
+
+export const classesRelations = relations(classes, ({ one, many }) => ({
+  teacher: one(users, { fields: [classes.clerkId], references: [users.clerkId] }),
+  enrollments: many(classEnrollments),
+  questions: many(questions),
 }));
 
 export const enrollmentsRelations = relations(classEnrollments, ({ one }) => ({
-  class: one(classes, {
-    fields: [classEnrollments.classId],
-    references: [classes.id],
-  }),
-  student: one(users, {
-    fields: [classEnrollments.clerkId],
-    references: [users.clerkId],
-  }),
+  class: one(classes, { fields: [classEnrollments.classId], references: [classes.id] }),
+  student: one(users, { fields: [classEnrollments.clerkId], references: [users.clerkId] }),
+}));
+
+export const questionsRelations = relations(questions, ({ one }) => ({
+  class: one(classes, { fields: [questions.classId], references: [classes.id] }),
 }));

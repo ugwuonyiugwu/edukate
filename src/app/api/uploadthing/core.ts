@@ -23,7 +23,6 @@ export const ourFileRouter = {
       return { url: file.url };
     }),
 
-  // NEW: Dedicated uploader for Quizathon Submissions
   imageUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
     .middleware(async () => {
       // This runs on your server before upload
@@ -50,6 +49,17 @@ export const ourFileRouter = {
   classPdf: f({ pdf: { maxFileSize: "16MB", maxFileCount: 1 } })
     .onUploadComplete(async ({ file }) => {
       return { url: file.ufsUrl };
+    }),
+
+    questionImage: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const { userId } = await auth();
+      if (!userId) throw new Error("Unauthorized");
+      return { userId };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Upload complete for userId:", metadata.userId);
+      return { url: file.url };
     }),
 } satisfies FileRouter;
 
