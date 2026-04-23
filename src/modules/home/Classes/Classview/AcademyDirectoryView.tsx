@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from "next/navigation";
 import { trpc } from "@/trpc/client";
-import { ArrowRight, Gem, Play, Timer } from "lucide-react";
+import { ArrowRight, Gem, Play, Timer, Lock, Unlock, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -15,75 +16,87 @@ interface ClassData {
   pointsRequired: number;
   thumbnailUrl?: string | null;
   createdAt: Date | string | null;
-  clerkId: string;
-  description: string | null;
-  pdfUrl: string | null;
-  youtubeUrl: string | null;
 }
 
 interface DirectoryClassCardProps {
   c: ClassData;
   onJoin: (id: string) => void;
   isPending: boolean;
-  mounted: boolean;
-  currentTimestamp: number; // Renamed for clarity
+  currentTimestamp: number;
+  isEnrolled: boolean;
+  onMouseEnter: () => void;
 }
 
-const DirectoryClassCard = ({ c, onJoin, isPending, mounted, currentTimestamp }: DirectoryClassCardProps) => {
+const DirectoryClassCard = ({ 
+  c, 
+  onJoin, 
+  isPending, 
+  currentTimestamp, 
+  isEnrolled,
+  onMouseEnter 
+}: DirectoryClassCardProps) => {
+  const router = useRouter();
+  
   const countdownText = useMemo(() => {
-    // We use currentTimestamp (passed from parent) instead of calling Date.now() here
-    if (!mounted || !c.createdAt || currentTimestamp === 0) return `${c.examDelayDays} DAY DELAY`;
-
+    if (currentTimestamp === 0 || !c.createdAt) {
+      return `${c.examDelayDays}d Cycle`;
+    }
+    
     const start = new Date(c.createdAt).getTime();
-    const delayInMs = (c.examDelayDays || 0) * 24 * 60 * 60 * 1000;
-    const unlockTime = start + delayInMs;
-    const diff = unlockTime - currentTimestamp;
-
-    if (diff <= 0) return "READY TO UNLOCK";
-
-    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const s = Math.floor((diff % (1000 * 60)) / 1000);
-
+    const cycleMs = c.examDelayDays * 86400000;
+    const timePassed = currentTimestamp - start;
+    const remainingInCycle = cycleMs - (timePassed % cycleMs);
+    
+    const d = Math.floor(remainingInCycle / 86400000);
+    const h = Math.floor((remainingInCycle % 86400000) / 3600000);
+    const m = Math.floor((remainingInCycle % 3600000) / 60000);
+    const s = Math.floor((remainingInCycle % 60000) / 1000);
+    
     return `${d}d ${h}h ${m}m ${s}s`;
-  }, [mounted, c.createdAt, c.examDelayDays, currentTimestamp]); 
+  }, [c.createdAt, c.examDelayDays, currentTimestamp]);
+
+  const handleButtonClick = () => {
+    if (isEnrolled) {
+      router.push(`/classes/${c.id}`);
+    } else {
+      onJoin(c.id);
+    }
+  };
 
   return (
-    <div className="group cursor-pointer">
+    <div className="group cursor-pointer" onMouseEnter={onMouseEnter}>
       <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-slate-200 mb-4 shadow-sm group-hover:shadow-xl transition-all duration-300 border border-slate-100">
         {c.thumbnailUrl ? (
           <Image 
             src={c.thumbnailUrl} 
-            alt={c.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            alt={c.title} 
+            fill 
+            className="object-cover transition-transform duration-500 group-hover:scale-105" 
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-slate-900">
-            <Play className="text-white/20" size={48} />
-          </div>
+          <div className="w-full h-full flex items-center justify-center bg-slate-900"><Play className="text-white/20" size={48} /></div>
         )}
         
-        <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 tabular-nums">
+        <div className="absolute bottom-3 right-3 backdrop-blur-md bg-black/80 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 tabular-nums z-10">
           <Timer size={12} className="text-blue-400" />
           {countdownText}
         </div>
       </div>
 
       <div className="flex gap-4">
-        
-
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-black text-slate-900 leading-tight mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
-            {c.title}
-          </h3>
+        <div className="px-4 flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h3 className="text-base font-black text-slate-900 leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">
+              {c.title}
+            </h3>
+            <div className={`shrink-0 mt-1 ${isEnrolled ? "text-green-500" : "text-slate-300"}`}>
+              {isEnrolled ? <Unlock size={26} strokeWidth={3} /> : <Lock size={26} strokeWidth={3} />}
+            </div>
+          </div>
           
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                {c.subject}
-              </p>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{c.subject}</p>
               <span className="text-slate-300">•</span>
               <div className="flex items-center gap-1 text-blue-600">
                 <Gem size={10} />
@@ -93,12 +106,16 @@ const DirectoryClassCard = ({ c, onJoin, isPending, mounted, currentTimestamp }:
           </div>
 
           <button 
-            onClick={() => onJoin(c.id)}
-            disabled={isPending}
-            className="mt-5 w-full py-3 bg-white hover:bg-slate-900 hover:text-white text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all border-2 border-slate-900/5 hover:border-slate-900 disabled:opacity-50 shadow-sm"
+            onClick={handleButtonClick}
+            disabled={isPending} 
+            className={`mt-5 w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all border-2 ${
+              isEnrolled 
+              ? "bg-slate-900 border-slate-900 text-white hover:bg-slate-800" 
+              : "bg-white border-slate-900/5 hover:border-slate-900 hover:bg-slate-900 hover:text-white text-slate-900 shadow-sm"
+            }`}
           >
-            {isPending ? "Validating..." : "Unlock Session"} 
-            <ArrowRight size={14} />
+            {isPending ? "Validating..." : isEnrolled ? "Enter Classroom" : "Unlock Session"} 
+            {!isPending && (isEnrolled ? <Play size={14} fill="currentColor" /> : <ArrowRight size={14} />)}
           </button>
         </div>
       </div>
@@ -107,57 +124,97 @@ const DirectoryClassCard = ({ c, onJoin, isPending, mounted, currentTimestamp }:
 };
 
 export const AcademyDirectoryView = ({ selectedLevel }: { selectedLevel: string }) => {
-  const [mounted, setMounted] = useState(false);
-  const [ts, setTs] = useState(0);
+  const router = useRouter();
+  const [ts, setTs] = useState(0); 
+  const [activeSubject, setActiveSubject] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setMounted(true);
-    });
+    const frame = requestAnimationFrame(() => setTs(Date.now()));
+    const timer = setInterval(() => setTs(Date.now()), 1000);
+    return () => { clearInterval(timer); cancelAnimationFrame(frame); };
+  }, [selectedLevel]);
 
-    const timer = setInterval(() => {
-      setTs(Date.now());
-    }, 1000);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      clearInterval(timer);
-    };
-  }, []);
-
-  const [classes] = trpc.classes.getAll.useSuspenseQuery({ level: selectedLevel });
   const utils = trpc.useUtils();
+  const [classes] = trpc.classes.getAll.useSuspenseQuery({ level: selectedLevel });
+  const { data: userEnrollments } = trpc.classes.getEnrolledClassIds.useQuery();
+
+  const subjects = useMemo(() => {
+    const unique = Array.from(new Set(classes.map(c => c.subject)));
+    return ["All", ...unique];
+  }, [classes]);
+
+  const filteredClasses = useMemo(() => {
+    return classes.filter(c => {
+      const matchesSubject = activeSubject === "All" || c.subject === activeSubject;
+      const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSubject && matchesSearch;
+    });
+  }, [classes, activeSubject, searchQuery]);
 
   const joinMutation = trpc.classes.joinClass.useMutation({
-    onSuccess: () => {
-      toast.success("Enrollment confirmed!");
-      utils.users.getOne.invalidate(); 
+    onSuccess: (_, variables) => {
+      toast.success("Access Granted!");
+      utils.classes.getAll.invalidate();
+      utils.classes.getEnrolledClassIds.invalidate();
+      router.push(`/classes/${variables.classId}`);
     },
     onError: (err) => toast.error(err.message)
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="mb-12">
-        <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.4em] mb-2">
-          {selectedLevel} Registry
-        </p>
-        <h1 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900">
-          Available <span className="text-blue-600">Sessions</span>
-        </h1>
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Search Bar */}
+      <div className="mb-10 relative">
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        <input 
+          type="text"
+          placeholder="Search for a class or subject..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full h-16 pl-14 pr-12 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-slate-900 transition-all outline-none font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-medium"
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery("")} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-900 transition-colors">
+            <X size={20} />
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
-        {classes.map((c) => (
-          <DirectoryClassCard 
-            key={c.id} 
-            c={c as unknown as ClassData} 
-            mounted={mounted}
-            currentTimestamp={ts}
-            onJoin={(id) => joinMutation.mutate({ classId: id })}
-            isPending={joinMutation.isPending}
-          />
-        ))}
+      {/* Filter Tabs */}
+      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-md py-4 mb-8 border-b border-slate-100 -mx-6 px-6 overflow-x-auto no-scrollbar flex gap-3">
+          {subjects.map((subject) => (
+            <button
+              key={subject}
+              onClick={() => setActiveSubject(subject)}
+              className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all border ${
+                activeSubject === subject 
+                ? "bg-slate-900 text-white border-slate-900 shadow-md" 
+                : "bg-white text-slate-400 border-slate-100 hover:border-slate-300 hover:text-slate-600"
+              }`}
+            >
+              {subject}
+            </button>
+          ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+        {filteredClasses.map((c) => {
+          const isEnrolled = userEnrollments?.includes(c.id) ?? false;
+          const isThisCardLoading = joinMutation.isPending && joinMutation.variables?.classId === c.id;
+
+          return (
+            <DirectoryClassCard 
+              key={`${selectedLevel}-${c.id}`} 
+              c={c as unknown as ClassData} 
+              currentTimestamp={ts}
+              isEnrolled={isEnrolled}
+              onMouseEnter={() => utils.classes.getById.prefetch({ id: c.id })}
+              onJoin={(id) => joinMutation.mutate({ classId: id })}
+              isPending={isThisCardLoading}
+            />
+          );
+        })}
       </div>
     </div>
   );

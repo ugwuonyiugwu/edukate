@@ -1,6 +1,7 @@
 "use client"
 import { SignedIn, UserButton } from '@clerk/nextjs'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { UserAvatar } from '@/components/reusableavatar/avatar';
 
 interface HomeNavbarProps {
   activeTitle: string;
@@ -21,15 +22,7 @@ export function HomeNavbar({ activeTitle }: HomeNavbarProps) {
       </div>
       
       <div className="flex items-center gap-2 md:gap-4 shrink-0">
-        <SignedIn>
-          <UserButton 
-            appearance={{ 
-              elements: { 
-                avatarBox: "h-8 w-8 md:h-9 md:w-9 border-2 border-blue-50/20" 
-              } 
-            }} 
-          />
-        </SignedIn>
+        <UserAvatar/>
       </div>
     </nav>
   )

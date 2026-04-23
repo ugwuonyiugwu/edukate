@@ -1,25 +1,27 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
-import { questions, users } from "@/db/schema";
+import { baseProcedure, createTRPCRouter, protectedProcedure } from "@/trpc/init";
+import { questions, users, examResults } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { UTApi } from "uploadthing/server";
 
 const utapi = new UTApi();
 
-/**
- * Extracts the file key from an UploadThing URL.
- */
 const getFileKey = (url: string | null | undefined) => {
   if (!url || typeof url !== "string") return null;
   if (url.includes("/f/")) return url.split("/f/")[1];
   return url.split("/").pop() ?? null;
 };
 
+// Define an interface for the DB error to avoid 'any'
+interface DrizzleError {
+  message?: string;
+  detail?: string;
+  code?: string;
+}
+
 export const curriculumRouter = createTRPCRouter({
-  /**
-   * Fetches all questions for a specific class and type.
-   */
+  // Existing procedures
   getQuestions: protectedProcedure
     .input(z.object({ 
       classId: z.string(), 
@@ -34,9 +36,62 @@ export const curriculumRouter = createTRPCRouter({
       );
     }),
 
-  /**
-   * Deletes a single image from UploadThing storage immediately.
-   */
+  getByClassId: baseProcedure 
+    .input(z.object({ classId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.query.questions.findMany({
+        where: eq(questions.classId, input.classId),
+      });
+    }),
+
+  // Check if exam was already taken
+  getExistingResult: protectedProcedure
+    .input(z.object({ classId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const clerkId = ctx.clerkUserId;
+      if (!clerkId) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const result = await ctx.db
+        .select()
+        .from(examResults)
+        .where(
+          and(
+            eq(examResults.clerkId, clerkId),
+            eq(examResults.classId, input.classId)
+          )
+        )
+        .limit(1);
+      
+      return result[0] || null;
+    }),
+
+  // Submit Exam Result
+  submitExam: protectedProcedure
+    .input(z.object({ 
+      classId: z.string(), 
+      score: z.number(), 
+      total: z.number() 
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const clerkId = ctx.clerkUserId;
+      if (!clerkId) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      try {
+        await ctx.db.insert(examResults).values({
+          clerkId: clerkId,
+          classId: input.classId,
+          score: input.score,
+          total: input.total,
+        });
+        return { success: true };
+      } catch  {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Exam result already exists for this user.",
+        });
+      }
+    }),
+
   deleteImage: protectedProcedure
     .input(z.object({ url: z.string() }))
     .mutation(async ({ input }) => {
@@ -52,10 +107,7 @@ export const curriculumRouter = createTRPCRouter({
       }
       return { success: false };
     }),
-
-  /**
-   * Saves questions sequentially (No Transaction for Neon-HTTP support).
-   */
+    
   saveQuestions: protectedProcedure
     .input(z.object({
       classId: z.string(),
@@ -68,7 +120,6 @@ export const curriculumRouter = createTRPCRouter({
       }))
     }))
     .mutation(async ({ ctx, input }) => {
-      // 1. Auth & Admin Check
       const clerkId = ctx.clerkUserId;
       if (!clerkId) throw new TRPCError({ code: "UNAUTHORIZED" });
 
@@ -83,7 +134,6 @@ export const curriculumRouter = createTRPCRouter({
         });
       }
 
-      // 2. Storage Cleanup Logic
       const existingEntries = await ctx.db
         .select({ imageUrl: questions.imageUrl })
         .from(questions)
@@ -109,9 +159,7 @@ export const curriculumRouter = createTRPCRouter({
         }
       }
 
-      // 3. Database Operations (Sequential for HTTP Driver Support)
-     try {
-        // A. Remove existing set
+      try {
         await ctx.db.delete(questions).where(
           and(
             eq(questions.classId, input.classId),
@@ -119,7 +167,6 @@ export const curriculumRouter = createTRPCRouter({
           )
         );
 
-        // B. Insert new set
         if (input.questions.length > 0) {
           await ctx.db.insert(questions).values(
             input.questions.map((q) => ({
@@ -135,14 +182,8 @@ export const curriculumRouter = createTRPCRouter({
 
         return { success: true, count: input.questions.length };
       } catch (dbError: unknown) {
-        // We cast to a specific structure to avoid the 'any' warning
-        const error = dbError as { message?: string; detail?: string; code?: string };
+        const error = dbError as DrizzleError;
         
-        console.error("--- DATABASE UPDATE FAILED ---");
-        console.error("Message:", error.message);
-        console.error("Detail:", error.detail);
-        console.error("------------------------------");
-
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.detail || error.message || "Failed to update questions.",

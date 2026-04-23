@@ -164,7 +164,7 @@ export const DashboardView = () => {
 
           <div className="bg-blue-50 rounded-3xl p-5 border border-blue-100 shadow-sm">
             <div className="flex items-center gap-2 mb-4 text-blue-700"><BookOpen size={18} /><span className="font-semibold">Courses</span></div>
-            <div className="flex items-end gap-3"><span className="text-3xl font-bold text-blue-800">15%</span></div>
+            <div className="flex items-end gap-3"><span className="text-3xl font-bold text-blue-800">{user?.courseProgress ?? 0}</span></div>
           </div>
 
           {/* Library Card */}

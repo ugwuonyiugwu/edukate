@@ -13,10 +13,7 @@ const getFileKey = (url: string | null | undefined) => {
 };
 
 export const classRouter = createTRPCRouter({
-  /**
-   * Provides a synchronized server timestamp.
-   * Used to ensure timers are uniform across all user devices.
-   */
+ 
   getServerTime: baseProcedure
     .query(() => {
       return { serverTime: Date.now() };
@@ -165,26 +162,65 @@ export const classRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  joinClass: protectedProcedure
-    .input(z.object({ classId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+  getEnrolledClassIds: protectedProcedure
+    .query(async ({ ctx }) => {
       const userId = ctx.clerkUserId!;
-      const targetClass = await ctx.db.query.classes.findFirst({ where: eq(classes.id, input.classId) });
-      if (!targetClass) throw new TRPCError({ code: "NOT_FOUND" });
-
-      return await ctx.db.transaction(async (tx) => {
-        const user = await tx.query.users.findFirst({ where: eq(users.clerkId, userId) });
-        if (!user) throw new TRPCError({ code: "NOT_FOUND" });
-        if (user.points < targetClass.pointsRequired) throw new TRPCError({ code: "FORBIDDEN", message: "Low points" });
-
-        const existing = await tx.query.classEnrollments.findFirst({
-          where: and(eq(classEnrollments.classId, input.classId), eq(classEnrollments.clerkId, userId))
-        });
-        if (existing) throw new TRPCError({ code: "CONFLICT" });
-
-        await tx.update(users).set({ points: sql`${users.points} - ${targetClass.pointsRequired}` }).where(eq(users.clerkId, userId));
-        const [enrollment] = await tx.insert(classEnrollments).values({ classId: input.classId, clerkId: userId }).returning();
-        return { success: true, enrolledId: enrollment.id };
+      const enrollments = await ctx.db.query.classEnrollments.findMany({
+        where: eq(classEnrollments.clerkId, userId),
+        columns: {
+          classId: true,
+        },
       });
+      return enrollments.map((e) => e.classId);
     }),
+
+  joinClass: protectedProcedure
+  .input(z.object({ classId: z.string() }))
+  .mutation(async ({ ctx, input }) => {
+    const userId = ctx.clerkUserId!;
+    
+    // 1. Fetch Class and User for validation
+    const targetClass = await ctx.db.query.classes.findFirst({ 
+      where: eq(classes.id, input.classId) 
+    });
+    if (!targetClass) throw new TRPCError({ code: "NOT_FOUND" });
+
+    const user = await ctx.db.query.users.findFirst({ 
+      where: eq(users.clerkId, userId) 
+    });
+    if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+    if (user.points < targetClass.pointsRequired) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Insufficient points" });
+    }
+
+    // 2. Execute Updates in an Atomic Batch
+    try {
+      await ctx.db.batch([
+        // DEDUCT POINTS & INCREMENT COURSE PROGRESS
+        ctx.db
+          .update(users)
+          .set({ 
+            points: sql`${users.points} - ${targetClass.pointsRequired}`,
+            courseProgress: sql`${users.courseProgress} + 1`, // Incrementing the integer
+            updatedAt: new Date()
+          })
+          .where(eq(users.clerkId, userId)),
+        
+        // RECORD THE ENROLLMENT (So they don't pay twice)
+        ctx.db
+          .insert(classEnrollments)
+          .values({ 
+            classId: input.classId, 
+            clerkId: userId 
+          }),
+      ]);
+
+      return { success: true };
+    } catch {
+      throw new TRPCError({ 
+        code: "INTERNAL_SERVER_ERROR", 
+        message: "Failed to process enrollment." 
+      });
+    }
+  }),
 });

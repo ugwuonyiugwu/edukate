@@ -1,6 +1,6 @@
 import { 
   pgTable, text, timestamp, uuid, integer, 
-  uniqueIndex, varchar, date, serial, jsonb, boolean 
+  uniqueIndex, varchar, date, serial, unique, boolean 
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -177,4 +177,16 @@ export const enrollmentsRelations = relations(classEnrollments, ({ one }) => ({
 
 export const questionsRelations = relations(questions, ({ one }) => ({
   class: one(classes, { fields: [questions.classId], references: [classes.id] }),
+}));
+
+
+export const examResults = pgTable("exam_results", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clerkId: text("clerk_id").notNull().references(() => users.clerkId),
+  classId: text("class_id").notNull(), 
+  score: integer("score").notNull(),
+  total: integer("total").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  unq: unique().on(t.clerkId, t.classId),
 }));
