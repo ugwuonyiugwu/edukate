@@ -165,14 +165,14 @@ export const AcademyDirectoryView = ({ selectedLevel }: { selectedLevel: string 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Search Bar */}
-      <div className="mb-10 relative">
+      <div className="mb-5 relative lg:mx-47">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
         <input 
           type="text"
-          placeholder="Search for a class or subject..."
+          placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-16 pl-14 pr-12 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-slate-900 transition-all outline-none font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-medium"
+          className="w-full h-12 pl-14 pr-12 rounded-2xl bg-slate-50 border border-blue-600 lg:w-xl  focus:bg-white focus:border-slate-900 transition-all outline-none font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-medium"
         />
         {searchQuery && (
           <button onClick={() => setSearchQuery("")} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-900 transition-colors">
