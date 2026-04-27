@@ -13,7 +13,7 @@ export const ScholarshipFeed = () => {
     <div className="space-y-3 w-full max-w-4xl mx-auto p-2">
       {/* 1. HEADER BANNER */}
       <div className="relative w-full overflow-hidden mb-6 rounded-xl shadow-sm border border-slate-200 
-        aspect-3/1 sm:aspect-4/1 lg:aspect-7/2 min-h-30 sm:min-h-40">
+        aspect-[3/1] sm:aspect-[4/1] lg:aspect-[7/2] min-h-[120px] sm:min-h-[160px]">
         <Image
           src="/backgroud-images/scholarship-header.png" 
           fill
@@ -29,8 +29,8 @@ export const ScholarshipFeed = () => {
         <Link key={s.id} href={`/scholarship/${s.id}`} className="block group">
           <Card className="relative flex flex-row items-center border border-slate-100 shadow-sm overflow-hidden h-16 sm:h-20 transition-all group-hover:border-primary/40 group-hover:shadow-md cursor-pointer flex-nowrap">
             
-            {/* LEFT: Amount Section (Fixed width to ensure horizontal sync) */}
-            <div className="flex items-center justify-center px-3 sm:px-6 h-full bg-slate-50/40 min-w-22.5 sm:min-w-35 border-r border-dashed border-slate-200 relative shrink-0">
+            {/* LEFT: Amount Section with Perforation */}
+            <div className="flex items-center justify-center px-3 sm:px-6 h-full bg-slate-50/40 min-w-[95px] sm:min-w-[140px] border-r border-dashed border-slate-200 relative shrink-0">
               <h2 className="text-[13px] sm:text-lg font-black text-slate-800 tracking-tighter">
                 ₦{s.amount.toLocaleString()}
               </h2>
@@ -40,7 +40,7 @@ export const ScholarshipFeed = () => {
               <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border border-slate-100 rounded-full" />
             </div>
 
-            {/* MIDDLE: Info (Expands but truncates to prevent distortion) */}
+            {/* MIDDLE: Info (Ensures text wraps/truncates correctly) */}
             <div className="flex-1 px-3 sm:px-5 min-w-0 overflow-hidden">
               <h3 className="text-[12px] sm:text-[15px] font-bold text-slate-900 truncate uppercase">
                 {s.name}
@@ -50,7 +50,7 @@ export const ScholarshipFeed = () => {
               </p>
             </div>
 
-            {/* RIGHT: Action Button (Fixed width, shrinks slightly on mobile) */}
+            {/* RIGHT: Apply Button (Always visible on same line) */}
             <div className="px-2 sm:px-6 h-full flex items-center shrink-0">
               <Button 
                 asChild
