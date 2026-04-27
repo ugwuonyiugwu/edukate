@@ -190,3 +190,16 @@ export const examResults = pgTable("exam_results", {
 }, (t) => ({
   unq: unique().on(t.clerkId, t.classId),
 }));
+
+export const scholarships = pgTable("scholarships", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  scholarshipUrl: text("scholarship_url"),
+  amount: integer("amount").notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export type Scholarship = typeof scholarships.$inferSelect;
+export type NewScholarship = typeof scholarships.$inferInsert;

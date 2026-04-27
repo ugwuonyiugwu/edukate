@@ -37,7 +37,7 @@ const navItems = [
   { title: "User Profile", icon: User, url: "/profile" },
   { title: "Library", icon: Library, url: "/libraries" },
   { title: "Quizathon", icon: Trophy, url: "/quizathon" },
-  { title: "Scholarship", icon: GraduationCap, url: "/dashboard/scholarship" },
+  { title: "Scholarship", icon: GraduationCap, url: "/scholarship" },
   { title: "Notification", icon: Bell, url: "/dashboard/notifications" },
   { title: "Class", icon: School, url: "/classes" },
 ]
