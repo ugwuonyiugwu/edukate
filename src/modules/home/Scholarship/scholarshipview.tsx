@@ -4,12 +4,31 @@ import Link from "next/link";
 import { trpc } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import Image from "next/image";
 
 export const ScholarshipFeed = () => {
   const [scholarships] = trpc.scholarship.getAllAdmin.useSuspenseQuery();
 
   return (
     <div className="space-y-2 w-full max-w-4xl mx-auto p-2">
+
+      <div className="max-w-7xl w-full">
+              <div className="relative w-full overflow-hidden mb-8 rounded-lg shadow-lg border border-white/50 
+                aspect-3/1     /* Mobile (Square-ish) */
+                sm:aspect-3/1   /* Large Phones/Small Tablets */
+                lg:aspect-7/2   /* Large Desktop */
+                min-h-160px    /* Never let it get too thin */
+              ">
+                <Image
+                  src="/backgroud-images/scholarship-header.png" 
+                  fill
+                  alt="Online Learning Promotional Banner"           
+                  priority           
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+                  className="object-cover transition-transform duration-700 hover:scale-105" 
+                />
+              </div>
+            </div>
       {scholarships.map((s) => (
         <Link key={s.id} href={`/scholarship/${s.id}`} className="block group">
           <Card className="relative flex flex-row items-center border border-slate-200 shadow-sm overflow-hidden h-16 sm:h-20 transition-all group-hover:border-primary/50 group-hover:shadow-md cursor-pointer">
