@@ -11,7 +11,7 @@ export const scholarshipRouter = createTRPCRouter({
         name: z.string().min(2),
         description: z.string().min(10),
         amount: z.coerce.number().int().positive(),
-        scholarshipUrl: z.string().url("Please enter a valid URL"), // Added URL validation
+        scholarshipUrl: z.string().url("Please enter a valid URL"),
         isActive: z.boolean().default(false),
       })
     )
@@ -22,7 +22,7 @@ export const scholarshipRouter = createTRPCRouter({
           name: input.name,
           description: input.description,
           amount: input.amount,
-          scholarshipUrl: input.scholarshipUrl, // Added to insert
+          scholarshipUrl: input.scholarshipUrl,
           isActive: input.isActive,
         })
         .returning();
@@ -30,6 +30,7 @@ export const scholarshipRouter = createTRPCRouter({
       return newScholarship;
     }),
 
+  // Only Admins can update
   update: adminProcedure
     .input(
       z.object({
@@ -37,7 +38,7 @@ export const scholarshipRouter = createTRPCRouter({
         name: z.string().optional(),
         description: z.string().optional(),
         amount: z.coerce.number().int().positive().optional(),
-        scholarshipUrl: z.string().url().optional(), // Added as optional update
+        scholarshipUrl: z.string().url().optional(),
         isActive: z.boolean().optional(),
       })
     )
@@ -66,7 +67,7 @@ export const scholarshipRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getAllAdmin: adminProcedure.query(async ({ ctx }) => {
+  getAllAdmin: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.db.select().from(scholarships);
   }),
 
