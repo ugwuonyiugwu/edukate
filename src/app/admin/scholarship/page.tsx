@@ -1,22 +1,21 @@
-import { trpc } from "@/trpc/server";
-import { HydrateClient } from "@/trpc/server";
-import { Suspense } from "react";
+// src/app/admin/scholarship/page.tsx
+export const dynamic = "force-dynamic";
+
 import { ScholarshipManager } from "@/modules/Admin/Scholarship/ScholarshipAdminView";
-import { ScholarshipSkeleton } from "../../../modules/Admin/Scholarship/components/scholarshipSkeleton";
+import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
-export default async function AdminScholarshipPage() {
-  void trpc.scholarship.getAllAdmin.prefetch();
-
+export default function AdminScholarshipPage() {
   return (
-    // HydrateClient passes the prefetched state to the client-side hooks
-    <HydrateClient>
-      <main className="max-w-5xl mx-auto py-10 px-6">
-        <h1 className="text-2xl font-bold mb-8">Scholarship Management</h1>
-        
-         <Suspense fallback={<ScholarshipSkeleton />}>
-          <ScholarshipManager />
-        </Suspense>
-      </main>
-    </HydrateClient>
+    <div className="p-4 sm:p-8">
+      <h1 className="text-2xl font-bold mb-6">Scholarship Management</h1>
+      <Suspense fallback={
+        <div className="flex justify-center py-20">
+          <Loader2 className="animate-spin h-8 w-8 text-slate-400" />
+        </div>
+      }>
+        <ScholarshipManager />
+      </Suspense>
+    </div>
   );
 }
