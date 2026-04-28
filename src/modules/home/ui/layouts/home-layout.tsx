@@ -5,7 +5,7 @@ import { HomeNavbar } from '../components/home-navbar';
 import { HomeSidebar } from '../components/Homesidebar';
 
 export const HomeLayout = ({ children }: { children: React.ReactNode }) => {
-  const [activeTitle, setActiveTitle] = useState("Dashboard");
+  const [activeTitle, setActiveTitle] = useState("");
 
   return (
     <SidebarProvider>

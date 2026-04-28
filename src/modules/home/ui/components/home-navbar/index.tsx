@@ -1,5 +1,5 @@
 "use client"
-import { SignedIn, UserButton } from '@clerk/nextjs'
+
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { UserAvatar } from '@/components/reusableavatar/avatar';
 
