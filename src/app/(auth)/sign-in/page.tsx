@@ -77,7 +77,7 @@ const SignInPage = () => {
             <button type="button" className="pb-4 text-2xl font-bold text-blue-600 border-b-4 border-blue-600">
               Log in
             </button>
-            <Link href="/presign-up/sign-up">
+            <Link href="/sign-up/sign-up">
               <button type="button" className="pb-4 text-2xl font-bold text-slate-300 hover:text-slate-400 transition-all">
                 Sign Up
               </button>

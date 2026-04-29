@@ -96,7 +96,7 @@ const SignUpFormContent = () => {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-slate-50/50 px-4">
-      <Card className="w-full max-w-[440px] border border-blue-200 shadow-[0_20px_50px_rgba(8,112,184,0.08)] rounded-lg bg-white overflow-hidden">
+      <Card className="w-full max-w-110 border border-blue-200 shadow-[0_20px_50px_rgba(8,112,184,0.08)] rounded-lg bg-white overflow-hidden">
         <CardContent className="p-3 px-8">
           <div className="flex justify-center gap-12 mb-6 border-b border-slate-100">
             <Link href="/sign-in" className="pb-4 text-2xl font-bold text-slate-300 hover:text-slate-400 transition-all">
