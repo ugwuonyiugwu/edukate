@@ -5,6 +5,7 @@ import { quizRouter } from '@/modules/home/Quizathon/server/procedure';
 import { classRouter } from '@/modules/home/Classes/server/procedure';
 import { curriculumRouter } from '@/modules/Admin/Class/server/procedure';
 import { scholarshipRouter } from '@/modules/Admin/Scholarship/server/procedure';
+import { teacherRouter } from '@/modules/Admin/Teachers/server/procedure';
 
 export const appRouter = createTRPCRouter({
  
@@ -14,6 +15,7 @@ export const appRouter = createTRPCRouter({
  classes: classRouter,
  questions: curriculumRouter,
  scholarship: scholarshipRouter,
+ teacher: teacherRouter
 });
 // export type definition of API
 export type AppRouter = typeof appRouter; 

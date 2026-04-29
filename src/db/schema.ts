@@ -203,3 +203,15 @@ export const scholarships = pgTable("scholarships", {
 });
 export type Scholarship = typeof scholarships.$inferSelect;
 export type NewScholarship = typeof scholarships.$inferInsert;
+
+
+export const teachers = pgTable("teachers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  whatsappNumber: text("whatsapp_number").notNull(),
+  subjects: text("subjects").notNull(), // Comma separated list
+  topics: text("topics").notNull(),     // Comma separated list
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

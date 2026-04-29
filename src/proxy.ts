@@ -5,7 +5,6 @@ const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)', 
   '/quizathon(.*)', 
   '/libraries(.*)',
-  '/api/trpc/(.*)'
 ]);
 
 const isWebhookRoute = createRouteMatcher(['/api/users/webhook(.*)']);
