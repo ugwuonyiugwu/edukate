@@ -84,7 +84,7 @@ export const TeacherView = () => {
                   asChild
                 >
                   <a 
-                    href={`https://wa.me/git${teacher.whatsappNumber.replace(/\D/g, '')}`} 
+                    href={`https://wa.me/${teacher.whatsappNumber}`} 
                     target="_blank" 
                     rel="noreferrer"
                     className="flex items-center gap-2"
